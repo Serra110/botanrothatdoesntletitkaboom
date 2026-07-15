@@ -7,7 +7,7 @@ const { successEmbed, dangerEmbed } = require("../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("quarantine")
-    .setDescription("Coloca um membro em quarentena manualmente.")
+    .setDescription("Places a member in quarantine manually.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addUserOption((opt) => opt.setName("user").setDescription("Sends the member to quarantine").setRequired(true))
     .addStringOption((opt) => opt.setName("reason").setDescription("The reason for the quarantine").setRequired(false)),
@@ -30,7 +30,7 @@ module.exports = {
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (!member) {
-      await interaction.editReply({ embeds: [dangerEmbed("Membro não encontrado", null)] });
+      await interaction.editReply({ embeds: [dangerEmbed("Member not found", null)] });
       return;
     }
 

@@ -5,13 +5,13 @@ const { neutralEmbed, dangerEmbed } = require("../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("logs")
-    .setDescription("Consulta logs forenses.")
+    .setDescription("Consult forensic logs.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand((sub) =>
       sub
         .setName("incident")
-        .setDescription("Mostra os detalhes de um incidente.")
-        .addStringOption((opt) => opt.setName("id").setDescription("ID do incidente (ex: INC-XXXXX)").setRequired(true))
+        .setDescription("Shows the details of an incident.")
+        .addStringOption((opt) => opt.setName("id").setDescription("Incident ID (e.g. INC-XXXXX)").setRequired(true))
     ),
 
   async execute(interaction) {
@@ -19,29 +19,29 @@ module.exports = {
     const incident = await Incident.findOne({ guildId: interaction.guild.id, incidentId }).lean();
 
     if (!incident) {
-      await interaction.reply({ embeds: [dangerEmbed("Incidente não encontrado", `\`${incidentId}\``)], ephemeral: true });
+      await interaction.reply({ embeds: [dangerEmbed("Incident not found", `\`${incidentId}\``)], ephemeral: true });
       return;
     }
 
     const duration = incident.endedAt
       ? `${Math.round((new Date(incident.endedAt) - new Date(incident.startedAt)) / 1000)}s`
-      : "em curso";
+      : "in progress";
 
     const summary = [
-      `**Motivo:** ${incident.reason}`,
-      `**Duração:** ${duration}`,
-      incident.primaryResponsible ? `**Responsável principal:** <@${incident.primaryResponsible}>` : null,
+      `**Reason:** ${incident.reason}`,
+      `**Duration:** ${duration}`,
+      incident.primaryResponsible ? `**Primary responsible:** <@${incident.primaryResponsible}>` : null,
       incident.secondaryResponsible?.length
-        ? `**Responsáveis secundários:** ${incident.secondaryResponsible.map((id) => `<@${id}>`).join(", ")}`
+        ? `**Secondary responsible:** ${incident.secondaryResponsible.map((id) => `<@${id}>`).join(", ")}`
         : null,
-      `**Canais apagados:** ${incident.channelsDeleted?.length || 0}`,
-      `**Roles apagadas:** ${incident.rolesDeleted?.length || 0}`,
-      `**Bots adicionados:** ${incident.botsAdded?.length || 0}`,
-      `**Ações executadas:** ${incident.actions?.length || 0}`,
-      `**Backup restaurado:** ${incident.backupRestoredId ? "sim" : "não"}`,
-      incident.responseTimeMs ? `**Tempo até resposta:** ${incident.responseTimeMs}ms` : null,
-      incident.recoveryTimeMs ? `**Tempo até recuperação:** ${incident.recoveryTimeMs}ms` : null,
-      `**Resolvido:** ${incident.resolved ? "sim" : "não"}`
+      `**Channels deleted:** ${incident.channelsDeleted?.length || 0}`,
+      `**Roles deleted:** ${incident.rolesDeleted?.length || 0}`,
+      `**Bots added:** ${incident.botsAdded?.length || 0}`,
+      `**Actions executed:** ${incident.actions?.length || 0}`,
+      `**Backup restored:** ${incident.backupRestoredId ? "yes" : "no"}`,
+      incident.responseTimeMs ? `**Response time:** ${incident.responseTimeMs}ms` : null,
+      incident.recoveryTimeMs ? `**Recovery time:** ${incident.recoveryTimeMs}ms` : null,
+      `**Resolved:** ${incident.resolved ? "yes" : "no"}`
     ]
       .filter(Boolean)
       .join("\n");

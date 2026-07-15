@@ -7,17 +7,17 @@ const { successEmbed, dangerEmbed } = require("../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("lockdown")
-    .setDescription("Ativa ou desativa o lockdown manualmente.")
+    .setDescription("Enables or disables lockdown manually.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((sub) => sub.setName("on").setDescription("Ativa o lockdown."))
-    .addSubcommand((sub) => sub.setName("off").setDescription("Desativa o lockdown.")),
+    .addSubcommand((sub) => sub.setName("on").setDescription("Enables lockdown."))
+    .addSubcommand((sub) => sub.setName("off").setDescription("Disables lockdown.")),
 
   async execute(interaction) {
     const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
     if (!isAuthorized(interaction.member, config || {})) {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Não tens autorização para gerir o lockdown.")],
+        embeds: [dangerEmbed("No permission", "You are not authorized to manage lockdown.")],
         ephemeral: true
       });
       return;
@@ -28,10 +28,10 @@ module.exports = {
 
     if (sub === "on") {
       await lockdownService.enableLockdown(interaction.guild);
-      await interaction.editReply({ embeds: [successEmbed("🔒 Lockdown ativado")] });
+      await interaction.editReply({ embeds: [successEmbed("🔒 Lockdown enabled")] });
     } else {
       await lockdownService.disableLockdown(interaction.guild);
-      await interaction.editReply({ embeds: [successEmbed("🔓 Lockdown desativado")] });
+      await interaction.editReply({ embeds: [successEmbed("🔓 Lockdown disabled")] });
     }
   }
 };

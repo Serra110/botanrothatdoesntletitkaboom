@@ -7,11 +7,11 @@ const { successEmbed, dangerEmbed } = require("../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("unquarantine")
-    .setDescription("Remove a quarentena de um membro.")
+    .setDescription("Removes quarantine from a member.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addUserOption((opt) => opt.setName("utilizador").setDescription("Membro a libertar da quarentena").setRequired(true))
+    .addUserOption((opt) => opt.setName("user").setDescription("Member to release from quarantine").setRequired(true))
     .addBooleanOption((opt) =>
-      opt.setName("inocente").setDescription("Restaurar roles anteriores (true) ou manter marcado como culpado (false)").setRequired(true)
+      opt.setName("innocent").setDescription("Restore previous roles (true) or keep marked as guilty (false)").setRequired(true)
     ),
 
   async execute(interaction) {
@@ -19,7 +19,7 @@ module.exports = {
 
     if (!isAuthorized(interaction.member, config || {})) {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Não tens autorização para remover quarentenas.")],
+        embeds: [dangerEmbed("No permission", "You are not authorized to remove quarantines.")],
         ephemeral: true
       });
       return;
@@ -27,20 +27,20 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const targetUser = interaction.options.getUser("utilizador");
-    const innocent = interaction.options.getBoolean("inocente");
+    const targetUser = interaction.options.getUser("user");
+    const innocent = interaction.options.getBoolean("innocent");
 
     const result = await quarantineService.clearQuarantine(interaction.guild, targetUser.id, innocent, interaction.user.id);
 
     if (!result) {
-      await interaction.editReply({ embeds: [dangerEmbed("Sem quarentena ativa para este membro", null)] });
+      await interaction.editReply({ embeds: [dangerEmbed("No active quarantine for this member", null)] });
       return;
     }
 
     await interaction.editReply({
       embeds: [
         successEmbed(
-          innocent ? "✅ Quarentena removida (inocente)" : "Utilizador marcado como culpado",
+          innocent ? "✅ Quarantine removed (innocent)" : "User marked as guilty",
           `${targetUser.tag}`
         )
       ]

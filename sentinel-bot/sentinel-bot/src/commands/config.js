@@ -12,75 +12,75 @@ async function getOrCreateConfig(guildId) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("config")
-    .setDescription("Painel de configuração do Sentinel.")
+    .setDescription("Sentinel configuration panel.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((sub) => sub.setName("view").setDescription("Mostra a configuração atual."))
+    .addSubcommand((sub) => sub.setName("view").setDescription("Shows the current configuration."))
     .addSubcommand((sub) =>
       sub
         .setName("set-owners")
-        .setDescription("Define o Owner e Co-Owner do bot para este servidor.")
+        .setDescription("Sets the Owner and Co-Owner of the bot for this server.")
         .addUserOption((o) => o.setName("owner").setDescription("Owner").setRequired(true))
         .addUserOption((o) => o.setName("co_owner").setDescription("Co-Owner").setRequired(false))
     )
     .addSubcommand((sub) =>
       sub
         .setName("add-critical-channel")
-        .setDescription("Adiciona um canal à lista de canais críticos.")
-        .addChannelOption((o) => o.setName("canal").setDescription("Canal crítico").setRequired(true))
+        .setDescription("Adds a channel to the critical channels list.")
+        .addChannelOption((o) => o.setName("channel").setDescription("Critical channel").setRequired(true))
     )
     .addSubcommand((sub) =>
       sub
         .setName("add-protected-role")
-        .setDescription("Adiciona uma role à lista de roles protegidas.")
-        .addRoleOption((o) => o.setName("role").setDescription("Role protegida").setRequired(true))
+        .setDescription("Adds a role to the protected roles list.")
+        .addRoleOption((o) => o.setName("role").setDescription("Protected role").setRequired(true))
     )
     .addSubcommand((sub) =>
       sub
         .setName("add-authorized-role")
-        .setDescription("Adiciona uma role autorizada a agir durante lockdown/emergência.")
-        .addRoleOption((o) => o.setName("role").setDescription("Role autorizada").setRequired(true))
+        .setDescription("Adds a role authorized to act during lockdown/emergency.")
+        .addRoleOption((o) => o.setName("role").setDescription("Authorized role").setRequired(true))
     )
     .addSubcommand((sub) =>
       sub
         .setName("set-log-channel")
-        .setDescription("Define o canal de logs.")
+        .setDescription("Sets the log channel.")
         .addChannelOption((o) =>
-          o.setName("canal").setDescription("Canal de logs").addChannelTypes(ChannelType.GuildText).setRequired(true)
+          o.setName("channel").setDescription("Log channel").addChannelTypes(ChannelType.GuildText).setRequired(true)
         )
     )
     .addSubcommand((sub) =>
       sub
         .setName("set-approval-channel")
-        .setDescription("Define o canal de pedidos de aprovação.")
+        .setDescription("Sets the approval requests channel.")
         .addChannelOption((o) =>
-          o.setName("canal").setDescription("Canal de aprovações").addChannelTypes(ChannelType.GuildText).setRequired(true)
+          o.setName("channel").setDescription("Approval channel").addChannelTypes(ChannelType.GuildText).setRequired(true)
         )
     )
     .addSubcommand((sub) =>
       sub
         .setName("set-thresholds")
-        .setDescription("Define os limiares do Threat Score.")
-        .addIntegerOption((o) => o.setName("alerta").setDescription("Limiar de alerta").setRequired(true))
-        .addIntegerOption((o) => o.setName("quarentena").setDescription("Limiar de quarentena").setRequired(true))
-        .addIntegerOption((o) => o.setName("emergencia").setDescription("Limiar de emergência").setRequired(true))
+        .setDescription("Sets the Threat Score thresholds.")
+        .addIntegerOption((o) => o.setName("alert").setDescription("Alert threshold").setRequired(true))
+        .addIntegerOption((o) => o.setName("quarantine").setDescription("Quarantine threshold").setRequired(true))
+        .addIntegerOption((o) => o.setName("emergency").setDescription("Emergency threshold").setRequired(true))
     )
     .addSubcommand((sub) =>
       sub
         .setName("set-backup-interval")
-        .setDescription("Define o intervalo entre backups automáticos (minutos).")
-        .addIntegerOption((o) => o.setName("minutos").setDescription("Intervalo em minutos").setRequired(true))
+        .setDescription("Sets the interval between automatic backups (minutes).")
+        .addIntegerOption((o) => o.setName("minutes").setDescription("Interval in minutes").setRequired(true))
     )
-    .addSubcommand((sub) => sub.setName("enable-honeypot").setDescription("Cria e ativa o Modo Honeypot.")),
+    .addSubcommand((sub) => sub.setName("enable-honeypot").setDescription("Creates and enables Honeypot Mode.")),
 
   async execute(interaction) {
     const existing = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
-    // Para set-owners, permite bootstrap inicial mesmo sem config prévia
-    // (quem tem Administrator no Discord pode definir o primeiro Owner).
+    // For set-owners, allows initial bootstrap even without prior config
+    // (anyone with Administrator on Discord can set the first Owner).
     const sub = interaction.options.getSubcommand();
     if (existing && !isOwnerOrCoOwner(interaction.member, existing) && sub !== "set-owners") {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Apenas o Owner ou Co-Owner podem alterar a configuração.")],
+        embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can change the configuration.")],
         ephemeral: true
       });
       return;
@@ -91,19 +91,19 @@ module.exports = {
     switch (sub) {
       case "view": {
         const summary = [
-          `**Owner:** ${config.ownerId ? `<@${config.ownerId}>` : "não definido"}`,
-          `**Co-Owner:** ${config.coOwnerId ? `<@${config.coOwnerId}>` : "não definido"}`,
-          `**Canais críticos:** ${config.criticalChannelIds.length}`,
-          `**Roles protegidas:** ${config.protectedRoleIds.length}`,
-          `**Roles autorizadas:** ${config.authorizedRoleIds.length}`,
-          `**Canal de logs:** ${config.logChannelId ? `<#${config.logChannelId}>` : "não definido"}`,
-          `**Canal de aprovações:** ${config.approvalChannelId ? `<#${config.approvalChannelId}>` : "não definido"}`,
-          `**Limiares:** alerta ${config.threatThresholds.alert} / quarentena ${config.threatThresholds.quarantine} / emergência ${config.threatThresholds.emergency}`,
-          `**Intervalo de backup:** ${config.backupIntervalMinutes} min`,
-          `**Modo manutenção:** ${config.maintenanceMode ? "ativo" : "inativo"}`,
-          `**Honeypot:** ${config.honeypot?.enabled ? "ativo" : "inativo"}`
+          `**Owner:** ${config.ownerId ? `<@${config.ownerId}>` : "not set"}`,
+          `**Co-Owner:** ${config.coOwnerId ? `<@${config.coOwnerId}>` : "not set"}`,
+          `**Critical channels:** ${config.criticalChannelIds.length}`,
+          `**Protected roles:** ${config.protectedRoleIds.length}`,
+          `**Authorized roles:** ${config.authorizedRoleIds.length}`,
+          `**Log channel:** ${config.logChannelId ? `<#${config.logChannelId}>` : "not set"}`,
+          `**Approval channel:** ${config.approvalChannelId ? `<#${config.approvalChannelId}>` : "not set"}`,
+          `**Thresholds:** alert ${config.threatThresholds.alert} / quarantine ${config.threatThresholds.quarantine} / emergency ${config.threatThresholds.emergency}`,
+          `**Backup interval:** ${config.backupIntervalMinutes} min`,
+          `**Maintenance mode:** ${config.maintenanceMode ? "active" : "inactive"}`,
+          `**Honeypot:** ${config.honeypot?.enabled ? "active" : "inactive"}`
         ].join("\n");
-        await interaction.reply({ embeds: [neutralEmbed("⚙️ Configuração do Sentinel", summary)], ephemeral: true });
+        await interaction.reply({ embeds: [neutralEmbed("⚙️ Sentinel Configuration", summary)], ephemeral: true });
         return;
       }
 
@@ -112,15 +112,15 @@ module.exports = {
         const coOwner = interaction.options.getUser("co_owner");
         if (coOwner) config.coOwnerId = coOwner.id;
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Owner/Co-Owner definidos")], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Owner/Co-Owner set")], ephemeral: true });
         return;
       }
 
       case "add-critical-channel": {
-        const channel = interaction.options.getChannel("canal");
+        const channel = interaction.options.getChannel("channel");
         if (!config.criticalChannelIds.includes(channel.id)) config.criticalChannelIds.push(channel.id);
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Canal crítico adicionado", `<#${channel.id}>`)], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Critical channel added", `<#${channel.id}>`)], ephemeral: true });
         return;
       }
 
@@ -128,7 +128,7 @@ module.exports = {
         const role = interaction.options.getRole("role");
         if (!config.protectedRoleIds.includes(role.id)) config.protectedRoleIds.push(role.id);
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Role protegida adicionada", role.name)], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Protected role added", role.name)], ephemeral: true });
         return;
       }
 
@@ -136,40 +136,40 @@ module.exports = {
         const role = interaction.options.getRole("role");
         if (!config.authorizedRoleIds.includes(role.id)) config.authorizedRoleIds.push(role.id);
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Role autorizada adicionada", role.name)], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Authorized role added", role.name)], ephemeral: true });
         return;
       }
 
       case "set-log-channel": {
-        config.logChannelId = interaction.options.getChannel("canal").id;
+        config.logChannelId = interaction.options.getChannel("channel").id;
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Canal de logs definido")], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Log channel set")], ephemeral: true });
         return;
       }
 
       case "set-approval-channel": {
-        config.approvalChannelId = interaction.options.getChannel("canal").id;
+        config.approvalChannelId = interaction.options.getChannel("channel").id;
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Canal de aprovações definido")], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Approval channel set")], ephemeral: true });
         return;
       }
 
       case "set-thresholds": {
         config.threatThresholds = {
-          alert: interaction.options.getInteger("alerta"),
-          quarantine: interaction.options.getInteger("quarentena"),
-          emergency: interaction.options.getInteger("emergencia")
+          alert: interaction.options.getInteger("alert"),
+          quarantine: interaction.options.getInteger("quarantine"),
+          emergency: interaction.options.getInteger("emergency")
         };
         await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Limiares atualizados")], ephemeral: true });
+        await interaction.reply({ embeds: [successEmbed("✅ Thresholds updated")], ephemeral: true });
         return;
       }
 
       case "set-backup-interval": {
-        config.backupIntervalMinutes = interaction.options.getInteger("minutos");
+        config.backupIntervalMinutes = interaction.options.getInteger("minutes");
         await config.save();
         await interaction.reply({
-          embeds: [successEmbed("✅ Intervalo de backup atualizado", "Nota: reinicia o bot para aplicar ao agendador.")],
+          embeds: [successEmbed("✅ Backup interval updated", "Note: restart the bot to apply to the scheduler.")],
           ephemeral: true
         });
         return;
@@ -179,7 +179,7 @@ module.exports = {
         const honeypotService = require("../services/honeypotService");
         await honeypotService.setupHoneypot(interaction.guild);
         await interaction.reply({
-          embeds: [successEmbed("🍯 Honeypot ativado", "Role e canal-isco criados. Qualquer interação com eles dispara uma investigação.")],
+          embeds: [successEmbed("🍯 Honeypot enabled", "Role and bait channel created. Any interaction with them triggers an investigation.")],
           ephemeral: true
         });
         return;

@@ -17,11 +17,11 @@ async function deployCommands() {
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
   try {
-    logger.info(`A registar ${commands.length} comandos slash...`);
+    logger.info(`Registering ${commands.length} slash commands...`);
     await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    logger.info("Comandos registados com sucesso.");
+    logger.info("Commands registered successfully.");
   } catch (err) {
-    logger.error(`Falha ao registar comandos: ${err.message}`);
+    logger.error(`Failed to register commands: ${err.message}`);
     process.exitCode = 1;
   }
 }

@@ -5,14 +5,14 @@ const { isOwnerOrCoOwner } = require("../utils/permissions");
 const { successEmbed, dangerEmbed, neutralEmbed } = require("../utils/embeds");
 
 /**
- * Executa uma bateria de testes "a seco" (sem alterar nada no
- * servidor real): verifica se os pré-requisitos de cada subsistema
- * estão corretamente configurados (secção 18).
+ * Runs a dry-run battery of tests (without changing anything on the
+ * real server): checks if each subsystem's prerequisites are
+ * correctly configured (section 18).
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("simulate")
-    .setDescription("Executa testes de segurança sem alterar o servidor.")
+    .setDescription("Runs security tests without modifying the server.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
@@ -20,7 +20,7 @@ module.exports = {
 
     if (!isOwnerOrCoOwner(interaction.member, config || {})) {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Apenas o Owner ou Co-Owner podem correr simulações.")],
+        embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can run simulations.")],
         ephemeral: true
       });
       return;
@@ -30,52 +30,52 @@ module.exports = {
 
     const results = [];
 
-    // Emergência: verifica se há behavior configurado e se owner/co-owner existem
+    // Emergency: checks if behavior is configured and owner/co-owner exist
     results.push(
       config
-        ? "✅ Configuração de emergência presente"
-        : "❌ Sem configuração — a emergência usaria valores por defeito"
+        ? "✅ Emergency configuration present"
+        : "❌ No configuration — emergency would use default values"
     );
 
-    // Lockdown: verifica se há roles autorizadas definidas
+    // Lockdown: checks if authorized roles are defined
     results.push(
       config?.authorizedRoleIds?.length
-        ? `✅ Lockdown: ${config.authorizedRoleIds.length} role(s) autorizada(s) ficariam ativas`
-        : "⚠️ Lockdown: nenhuma role autorizada configurada — só Owner/Co-Owner poderiam agir"
+        ? `✅ Lockdown: ${config.authorizedRoleIds.length} authorized role(s) would remain active`
+        : "⚠️ Lockdown: no authorized roles configured — only Owner/Co-Owner could act"
     );
 
-    // Rollback / Backups: verifica se existe pelo menos 1 backup válido
+    // Rollback / Backups: checks if at least 1 valid backup exists
     const latestBackup = await backupService.getLatestValidBackup(interaction.guild.id);
     results.push(
       latestBackup
-        ? `✅ Rollback: backup mais recente de ${new Date(latestBackup.createdAt).toLocaleString("pt-PT")}`
-        : "❌ Rollback: nenhum backup disponível — rollback automático falharia"
+        ? `✅ Rollback: most recent backup from ${new Date(latestBackup.createdAt).toLocaleString("en-US")}`
+        : "❌ Rollback: no backups available — automatic rollback would fail"
     );
 
-    // Permissões: verifica se o bot tem as permissões necessárias
+    // Permissions: checks if the bot has the necessary permissions
     const botMember = interaction.guild.members.me;
     const needed = ["ManageChannels", "ManageRoles", "KickMembers", "BanMembers", "ManageWebhooks", "ManageGuild"];
     const missing = needed.filter((p) => !botMember.permissions.has(p));
-    results.push(missing.length ? `⚠️ Permissões em falta para o bot: ${missing.join(", ")}` : "✅ Permissões do bot OK");
+    results.push(missing.length ? `⚠️ Missing bot permissions: ${missing.join(", ")}` : "✅ Bot permissions OK");
 
-    // Quarentena: verifica role existente
+    // Quarantine: checks existing role
     results.push(
       config?.quarantineRoleId && interaction.guild.roles.cache.has(config.quarantineRoleId)
-        ? "✅ Role de quarentena existente"
-        : "⚠️ Role de quarentena seria criada na primeira utilização"
+        ? "✅ Quarantine role exists"
+        : "⚠️ Quarantine role would be created on first use"
     );
 
-    // Recuperação: canais críticos configurados
+    // Recovery: critical channels configured
     results.push(
       config?.criticalChannelIds?.length
-        ? `✅ ${config.criticalChannelIds.length} canal(is) crítico(s) configurado(s)`
-        : "⚠️ Nenhum canal crítico configurado"
+        ? `✅ ${config.criticalChannelIds.length} critical channel(s) configured`
+        : "⚠️ No critical channels configured"
     );
 
     await interaction.editReply({
       embeds: [
         successEmbed(
-          "🧪 Simulação de Segurança (sem alterações reais)",
+          "🧪 Security Simulation (no real changes)",
           results.join("\n")
         )
       ]

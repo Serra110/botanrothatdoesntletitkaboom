@@ -7,17 +7,17 @@ const { successEmbed, dangerEmbed } = require("../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("emergency")
-    .setDescription("Força ou desativa o modo de emergência manualmente.")
+    .setDescription("Forces or disables emergency mode manually.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((sub) => sub.setName("start").setDescription("Ativa o modo de emergência imediatamente."))
-    .addSubcommand((sub) => sub.setName("stop").setDescription("Desativa o modo de emergência.")),
+    .addSubcommand((sub) => sub.setName("start").setDescription("Enables emergency mode immediately."))
+    .addSubcommand((sub) => sub.setName("stop").setDescription("Disables emergency mode.")),
 
   async execute(interaction) {
     const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
     if (!isOwnerOrCoOwner(interaction.member, config || {})) {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Apenas o Owner ou Co-Owner podem usar este comando.")],
+        embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can use this command.")],
         ephemeral: true
       });
       return;
@@ -28,13 +28,13 @@ module.exports = {
 
     if (sub === "start") {
       await emergencyService.activateEmergency(interaction.guild, {
-        reason: `Ativação manual por ${interaction.user.tag}`,
+        reason: `Manual activation by ${interaction.user.tag}`,
         responsibleUserIds: []
       });
-      await interaction.editReply({ embeds: [successEmbed("🚨 Emergência ativada manualmente")] });
+      await interaction.editReply({ embeds: [successEmbed("🚨 Emergency activated manually")] });
     } else {
       await emergencyService.deactivateEmergency(interaction.guild);
-      await interaction.editReply({ embeds: [successEmbed("Emergência desativada")] });
+      await interaction.editReply({ embeds: [successEmbed("Emergency deactivated")] });
     }
   }
 };
