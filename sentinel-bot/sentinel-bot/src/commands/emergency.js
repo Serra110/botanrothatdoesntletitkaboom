@@ -15,7 +15,7 @@ module.exports = {
   async execute(interaction) {
     const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
-    if (!isOwnerOrCoOwner(interaction.member, config || {})) {
+    if (!isOwnerOrCoOwner(interaction.member)) {
       await interaction.reply({
         embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can use this command.")],
         ephemeral: true

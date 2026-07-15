@@ -5,7 +5,9 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
+    "bot": "node src/index.js",
     "start": "node src/index.js",
+    "deploy": "node src/commands/deploy-commands.js",
     "deploy-commands": "node src/commands/deploy-commands.js",
     "dev": "node --watch src/index.js"
   },

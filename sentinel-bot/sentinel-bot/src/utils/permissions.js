@@ -22,6 +22,26 @@ function getCriticalChannelIds() {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+function getAdminRolesToRemove() {
+  const raw = process.env.ADMIN_ROLES_TO_REMOVE || "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function getTrustedRoles() {
+  const raw = process.env.TRUSTED_ROLES || "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function getSaveChannels() {
+  const raw = process.env.SAVE_CHANNELS || "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function getExcludeChannels() {
+  const raw = process.env.EXCLUDE_CHANNELS || "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 function isOwnerOrCoOwner(member, guildConfig) {
   if (!member) return false;
   const ids = getOwnerIds();
@@ -59,5 +79,9 @@ module.exports = {
   hasDangerousPermissions,
   hasAdministrator,
   getOwnerIds,
-  getCriticalChannelIds
+  getCriticalChannelIds,
+  getAdminRolesToRemove,
+  getTrustedRoles,
+  getSaveChannels,
+  getExcludeChannels
 };

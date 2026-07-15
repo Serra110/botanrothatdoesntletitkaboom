@@ -60,6 +60,15 @@ function register(client) {
 
     await logForensic(channel.guild, { actorId, action: `${isCategory ? "Category" : "Channel"} deleted: ${channel.name}` });
 
+    // Critical channel deleted -> immediate emergency
+    if (isCriticalChannel(channel.id, config || {})) {
+      await emergencyService.activateEmergency(channel.guild, {
+        reason: `Critical ${isCategory ? "category" : "channel"} deleted: ${channel.name}`,
+        responsibleUserIds: actorId ? [actorId] : []
+      });
+      return;
+    }
+
     const points = isCategory
       ? config?.threatPoints?.categoryDelete ?? 100
       : config?.threatPoints?.channelDelete ?? 50;

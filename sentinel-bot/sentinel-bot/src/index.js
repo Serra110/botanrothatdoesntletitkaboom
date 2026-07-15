@@ -9,6 +9,7 @@ const { registerAllEvents } = require("./events");
 const GuildConfig = require("./models/GuildConfig");
 const backupService = require("./services/backupService");
 const integrityCheckService = require("./services/integrityCheckService");
+const chatLogger = require("./services/chatLogger");
 const logger = require("./utils/logger");
 
 const client = new Client({
@@ -84,6 +85,14 @@ async function bootstrap() {
 
   client.once("clientReady", () => {
     logger.info(`Sentinel logged in as ${client.user.tag}`);
+  });
+
+  // Chat logging: save messages from configured channels
+  client.on("messageCreate", async (message) => {
+    if (message.author.bot) return;
+    await chatLogger.saveMessage(message).catch((e) =>
+      logger.error(`Chat save error: ${e.message}`)
+    );
   });
 
   await client.login(process.env.DISCORD_TOKEN);

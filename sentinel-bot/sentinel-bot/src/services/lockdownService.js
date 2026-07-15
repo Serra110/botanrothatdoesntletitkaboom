@@ -5,11 +5,16 @@ const logger = require("../utils/logger");
 // Permissions blocked during lockdown (section 8) — Kick/Ban/Timeout
 // are intentionally excluded, reserved for authorized roles.
 const LOCKDOWN_PERMISSIONS = [
+  PermissionsBitField.Flags.SendMessages,
+  PermissionsBitField.Flags.SendMessagesInThreads,
+  PermissionsBitField.Flags.CreatePublicThreads,
+  PermissionsBitField.Flags.CreatePrivateThreads,
+  PermissionsBitField.Flags.Speak,
   PermissionsBitField.Flags.ManageChannels,
   PermissionsBitField.Flags.ManageRoles,
   PermissionsBitField.Flags.ManageGuild,
   PermissionsBitField.Flags.ManageWebhooks,
-  PermissionsBitField.Flags.ManageGuildExpressions, // emojis/stickers
+  PermissionsBitField.Flags.ManageGuildExpressions,
   PermissionsBitField.Flags.CreateInstantInvite
 ];
 
@@ -39,7 +44,25 @@ async function enableLockdown(guild) {
     );
   }
 
-  lockdownSnapshots.set(guild.id, snapshot);
+  // Also deny SendMessages on @everyone for all text channels
+  await guild.channels.fetch();
+  const lockdownChannelOverwrites = [];
+  for (const channel of guild.channels.cache.values()) {
+    if (!channel.isTextBased()) continue;
+    const everyoneOverwrite = channel.permissionOverwrites.cache.get(guild.id);
+    const currentDeny = everyoneOverwrite?.deny || PermissionsBitField.DefaultBit;
+
+    // Skip if already denied
+    if (currentDeny & PermissionsBitField.Flags.SendMessages) continue;
+
+    const newDeny = currentDeny | PermissionsBitField.Flags.SendMessages;
+    lockdownChannelOverwrites.push({ channelId: channel.id, everyoneDeny: newDeny.toString() });
+
+    await channel.permissionOverwrites.edit(guild.id, { SendMessages: false }, "Sentinel: lockdown - chat disabled")
+      .catch((e) => logger.error(`Failed to deny SendMessages in ${channel.id}: ${e.message}`));
+  }
+
+  lockdownSnapshots.set(guild.id, { roles: snapshot, channels: lockdownChannelOverwrites });
 
   if (config) {
     config.lockdownActive = true;
@@ -53,14 +76,22 @@ async function disableLockdown(guild) {
   const config = await GuildConfig.findOne({ guildId: guild.id });
   if (config && !config.lockdownActive) return;
 
-  const snapshot = lockdownSnapshots.get(guild.id) || [];
+  const snapshot = lockdownSnapshots.get(guild.id) || { roles: [], channels: [] };
 
-  for (const { roleId, permissions } of snapshot) {
+  for (const { roleId, permissions } of snapshot.roles || []) {
     const role = guild.roles.cache.get(roleId);
     if (!role) continue;
     await role
       .setPermissions(BigInt(permissions), "Sentinel: lockdown disabled")
       .catch((e) => logger.error(`Failed to restore permissions for ${roleId}: ${e.message}`));
+  }
+
+  // Restore @everyone channel overwrites
+  for (const { channelId } of snapshot.channels || []) {
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) continue;
+    await channel.permissionOverwrites.edit(guild.id, { SendMessages: null }, "Sentinel: lockdown - chat restored")
+      .catch((e) => logger.error(`Failed to restore SendMessages in ${channelId}: ${e.message}`));
   }
 
   lockdownSnapshots.delete(guild.id);

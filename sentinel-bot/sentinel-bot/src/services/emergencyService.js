@@ -7,7 +7,7 @@ const backupService = require("./backupService");
 const rollbackService = require("./rollbackService");
 const responsibilityChain = require("./responsibilityChain");
 const { generateIncidentId, logForensic } = require("./forensicsLogger");
-const { getOwnerIds } = require("../utils/permissions");
+const { getOwnerIds, getAdminRolesToRemove, getTrustedRoles } = require("../utils/permissions");
 const { emergencyEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
@@ -42,22 +42,43 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
 
   await logForensic(guild, { incidentId, action: "EMERGENCY ACTIVATED", detail: { summary: reason } });
 
-  // 1. Remove admin roles from staff (except Owner/Co-Owner)
+  // 1. Remove admin roles from staff (except Owner/Co-Owner and trusted roles)
   const behavior = config?.emergencyBehavior || {};
   const strippedAdmins = [];
+  const adminRolesToRemove = getAdminRolesToRemove();
+  const trustedRoles = getTrustedRoles();
 
   if (behavior.stripAdminFromStaff !== false) {
     await guild.members.fetch();
     for (const member of guild.members.cache.values()) {
       const ownerIds = getOwnerIds();
       if (ownerIds.includes(member.id)) continue;
-      if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) continue;
 
-      const adminRoles = member.roles.cache.filter((r) => r.permissions.has(PermissionsBitField.Flags.Administrator));
-      for (const role of adminRoles.values()) {
-        await member.roles.remove(role, "Sentinel: emergency - Administrator removed").catch(() => {});
+      // Skip members with trusted roles
+      if (trustedRoles.some((roleId) => member.roles.cache.has(roleId))) continue;
+
+      // Remove specific admin roles from ADMIN_ROLES_TO_REMOVE env
+      for (const roleId of adminRolesToRemove) {
+        if (member.roles.cache.has(roleId)) {
+          await member.roles.remove(roleId, "Sentinel: emergency - admin role removed").catch((e) => {
+            logger.error(`Failed to remove role ${roleId} from ${member.id}: ${e.message}`);
+          });
+          strippedAdmins.push(member.id);
+        }
       }
-      strippedAdmins.push(member.id);
+
+      // Also remove any role that has Administrator permission (if not in trusted roles)
+      const adminRoles = member.roles.cache.filter((r) =>
+        r.permissions.has(PermissionsBitField.Flags.Administrator) &&
+        !trustedRoles.includes(r.id) &&
+        !adminRolesToRemove.includes(r.id)
+      );
+      for (const role of adminRoles.values()) {
+        await member.roles.remove(role, "Sentinel: emergency - Administrator removed").catch((e) => {
+          logger.error(`Failed to remove role ${role.id} from ${member.id}: ${e.message}`);
+        });
+        if (!strippedAdmins.includes(member.id)) strippedAdmins.push(member.id);
+      }
     }
   }
 
@@ -130,13 +151,15 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
 
 async function deactivateEmergency(guild) {
   const config = await GuildConfig.findOne({ guildId: guild.id });
-  if (!config?.emergencyActive) return;
+  if (!config) return;
 
   backupService.markEmergency(guild.id, false);
   config.emergencyActive = false;
   await config.save();
 
-  await lockdownService.disableLockdown(guild);
+  await lockdownService.disableLockdown(guild).catch((e) =>
+    logger.error(`Failed to disable lockdown during emergency stop: ${e.message}`)
+  );
   logger.info(`Emergency deactivated manually in ${guild.id}`);
 }
 
