@@ -9,15 +9,15 @@ module.exports = {
     .setName("quarantine")
     .setDescription("Coloca um membro em quarentena manualmente.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addUserOption((opt) => opt.setName("utilizador").setDescription("Membro a colocar em quarentena").setRequired(true))
-    .addStringOption((opt) => opt.setName("motivo").setDescription("Motivo da quarentena").setRequired(false)),
+    .addUserOption((opt) => opt.setName("user").setDescription("Sends the member to quarantine").setRequired(true))
+    .addStringOption((opt) => opt.setName("reason").setDescription("The reason for the quarantine").setRequired(false)),
 
   async execute(interaction) {
     const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
     if (!isAuthorized(interaction.member, config || {})) {
       await interaction.reply({
-        embeds: [dangerEmbed("Sem permissão", "Não tens autorização para colocar membros em quarentena.")],
+        embeds: [dangerEmbed("No permission", "You do not have permission to quarantine members.")],
         ephemeral: true
       });
       return;
@@ -25,8 +25,8 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
-    const targetUser = interaction.options.getUser("utilizador");
-    const reason = interaction.options.getString("motivo") || `Quarentena manual por ${interaction.user.tag}`;
+    const targetUser = interaction.options.getUser("user");
+    const reason = interaction.options.getString("reason") || `Manual quarantine by ${interaction.user.tag}`;
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (!member) {
@@ -35,6 +35,6 @@ module.exports = {
     }
 
     await quarantineService.quarantineMember(interaction.guild, member, reason);
-    await interaction.editReply({ embeds: [successEmbed("🔒 Membro colocado em quarentena", `${targetUser.tag}: ${reason}`)] });
+    await interaction.editReply({ embeds: [successEmbed("🔒 Member quarantined", `${targetUser.tag}: ${reason}`)] });
   }
 };
