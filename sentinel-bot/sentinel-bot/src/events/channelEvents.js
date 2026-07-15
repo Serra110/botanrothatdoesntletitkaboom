@@ -5,6 +5,7 @@ const threatScoreService = require("../services/threatScoreService");
 const approvalService = require("../services/approvalService");
 const honeypotService = require("../services/honeypotService");
 const emergencyService = require("../services/emergencyService");
+const chatLogger = require("../services/chatLogger");
 const { logForensic } = require("../services/forensicsLogger");
 const { isCriticalChannel } = require("../utils/permissions");
 const logger = require("../utils/logger");
@@ -59,6 +60,13 @@ function register(client) {
     if (!actorId) return;
 
     await logForensic(channel.guild, { actorId, action: `${isCategory ? "Category" : "Channel"} deleted: ${channel.name}` });
+
+    // Save channel history BEFORE anything else (if configured)
+    if (!isCategory) {
+      await chatLogger.saveChannelHistory(channel).catch((e) =>
+        logger.error(`Failed to save channel history on delete: ${e.message}`)
+      );
+    }
 
     // Critical channel deleted -> immediate emergency
     if (isCriticalChannel(channel.id, config || {})) {

@@ -97,9 +97,13 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
     recentPrivilegeGranteeIds.forEach((id) => toQuarantine.add(id));
   }
 
+  // Filter out owner/co-owner and trusted role holders
   for (const userId of toQuarantine) {
+    if (ownerIds.includes(userId)) continue;
     const member = await guild.members.fetch(userId).catch(() => null);
-    if (member) await quarantineService.quarantineMember(guild, member, `Emergency: ${reason}`, incidentId);
+    if (!member) continue;
+    if (trustedRoles.some((roleId) => member.roles.cache.has(roleId))) continue;
+    await quarantineService.quarantineMember(guild, member, `Emergency: ${reason}`, incidentId);
   }
 
   await logForensic(guild, {
