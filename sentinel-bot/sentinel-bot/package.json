@@ -1,0 +1,21 @@
+{
+  "name": "sentinel-bot",
+  "version": "0.1.0",
+  "description": "Bot de segurança para Discord — prevenção, resposta a incidentes e recuperação automática.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy-commands": "node src/commands/deploy-commands.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "mongoose": "^8.5.1",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

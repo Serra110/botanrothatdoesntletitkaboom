@@ -1,0 +1,40 @@
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
+const GuildConfig = require("../models/GuildConfig");
+const quarantineService = require("../services/quarantineService");
+const { isAuthorized } = require("../utils/permissions");
+const { successEmbed, dangerEmbed } = require("../utils/embeds");
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName("quarantine")
+    .setDescription("Coloca um membro em quarentena manualmente.")
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addUserOption((opt) => opt.setName("utilizador").setDescription("Membro a colocar em quarentena").setRequired(true))
+    .addStringOption((opt) => opt.setName("motivo").setDescription("Motivo da quarentena").setRequired(false)),
+
+  async execute(interaction) {
+    const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
+
+    if (!isAuthorized(interaction.member, config || {})) {
+      await interaction.reply({
+        embeds: [dangerEmbed("Sem permissão", "Não tens autorização para colocar membros em quarentena.")],
+        ephemeral: true
+      });
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    const targetUser = interaction.options.getUser("utilizador");
+    const reason = interaction.options.getString("motivo") || `Quarentena manual por ${interaction.user.tag}`;
+    const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+
+    if (!member) {
+      await interaction.editReply({ embeds: [dangerEmbed("Membro não encontrado", null)] });
+      return;
+    }
+
+    await quarantineService.quarantineMember(interaction.guild, member, reason);
+    await interaction.editReply({ embeds: [successEmbed("🔒 Membro colocado em quarentena", `${targetUser.tag}: ${reason}`)] });
+  }
+};
