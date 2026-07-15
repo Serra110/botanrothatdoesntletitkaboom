@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js");
 const GuildConfig = require("../models/GuildConfig");
-const { isOwnerOrCoOwner } = require("../utils/permissions");
+const { isOwnerOrCoOwner, getOwnerIds, getCriticalChannelIds } = require("../utils/permissions");
 const { successEmbed, dangerEmbed, neutralEmbed } = require("../utils/embeds");
 
 async function getOrCreateConfig(guildId) {
@@ -15,19 +15,6 @@ module.exports = {
     .setDescription("Sentinel configuration panel.")
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand((sub) => sub.setName("view").setDescription("Shows the current configuration."))
-    .addSubcommand((sub) =>
-      sub
-        .setName("set-owners")
-        .setDescription("Sets the Owner and Co-Owner of the bot for this server.")
-        .addUserOption((o) => o.setName("owner").setDescription("Owner").setRequired(true))
-        .addUserOption((o) => o.setName("co_owner").setDescription("Co-Owner").setRequired(false))
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("add-critical-channel")
-        .setDescription("Adds a channel to the critical channels list.")
-        .addChannelOption((o) => o.setName("channel").setDescription("Critical channel").setRequired(true))
-    )
     .addSubcommand((sub) =>
       sub
         .setName("add-protected-role")
@@ -75,10 +62,8 @@ module.exports = {
   async execute(interaction) {
     const existing = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
-    // For set-owners, allows initial bootstrap even without prior config
-    // (anyone with Administrator on Discord can set the first Owner).
     const sub = interaction.options.getSubcommand();
-    if (existing && !isOwnerOrCoOwner(interaction.member, existing) && sub !== "set-owners") {
+    if (existing && !isOwnerOrCoOwner(interaction.member)) {
       await interaction.reply({
         embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can change the configuration.")],
         ephemeral: true
@@ -90,10 +75,12 @@ module.exports = {
 
     switch (sub) {
       case "view": {
+        const ownerIds = getOwnerIds();
+        const criticalIds = getCriticalChannelIds();
         const summary = [
-          `**Owner:** ${config.ownerId ? `<@${config.ownerId}>` : "not set"}`,
-          `**Co-Owner:** ${config.coOwnerId ? `<@${config.coOwnerId}>` : "not set"}`,
-          `**Critical channels:** ${config.criticalChannelIds.length}`,
+          `**Owner:** ${ownerIds[0] ? `<@${ownerIds[0]}>` : "not set"}`,
+          `**Co-Owner:** ${ownerIds[1] ? `<@${ownerIds[1]}>` : "not set"}`,
+          `**Critical channels:** ${criticalIds.length}`,
           `**Protected roles:** ${config.protectedRoleIds.length}`,
           `**Authorized roles:** ${config.authorizedRoleIds.length}`,
           `**Log channel:** ${config.logChannelId ? `<#${config.logChannelId}>` : "not set"}`,
@@ -104,23 +91,6 @@ module.exports = {
           `**Honeypot:** ${config.honeypot?.enabled ? "active" : "inactive"}`
         ].join("\n");
         await interaction.reply({ embeds: [neutralEmbed("⚙️ Sentinel Configuration", summary)], ephemeral: true });
-        return;
-      }
-
-      case "set-owners": {
-        config.ownerId = interaction.options.getUser("owner").id;
-        const coOwner = interaction.options.getUser("co_owner");
-        if (coOwner) config.coOwnerId = coOwner.id;
-        await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Owner/Co-Owner set")], ephemeral: true });
-        return;
-      }
-
-      case "add-critical-channel": {
-        const channel = interaction.options.getChannel("channel");
-        if (!config.criticalChannelIds.includes(channel.id)) config.criticalChannelIds.push(channel.id);
-        await config.save();
-        await interaction.reply({ embeds: [successEmbed("✅ Critical channel added", `<#${channel.id}>`)], ephemeral: true });
         return;
       }
 

@@ -1,5 +1,6 @@
 const backupService = require("./backupService");
 const GuildConfig = require("../models/GuildConfig");
+const { getCriticalChannelIds } = require("../utils/permissions");
 const { warnEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
@@ -35,7 +36,7 @@ async function runIntegrityCheck(guild) {
   }
 
   // Missing critical channels
-  for (const criticalId of config?.criticalChannelIds || []) {
+  for (const criticalId of getCriticalChannelIds()) {
     if (!currentChannelIds.has(criticalId)) findings.push(`⚠️ Missing critical channel: \`${criticalId}\``);
   }
 

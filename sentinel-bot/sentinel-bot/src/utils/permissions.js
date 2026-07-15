@@ -11,9 +11,21 @@ const DANGEROUS_PERMISSIONS = [
   PermissionsBitField.Flags.ManageGuildExpressions
 ];
 
+function getOwnerIds() {
+  const owner = process.env.OWNER_ID || null;
+  const coOwner = process.env.CO_OWNER_ID || null;
+  return [owner, coOwner].filter(Boolean);
+}
+
+function getCriticalChannelIds() {
+  const raw = process.env.CRITICAL_CHANNELS || "";
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 function isOwnerOrCoOwner(member, guildConfig) {
-  if (!member || !guildConfig) return false;
-  return member.id === guildConfig.ownerId || member.id === guildConfig.coOwnerId;
+  if (!member) return false;
+  const ids = getOwnerIds();
+  return ids.includes(member.id);
 }
 
 function isAuthorized(member, guildConfig) {
@@ -27,7 +39,7 @@ function isProtectedRole(roleId, guildConfig) {
 }
 
 function isCriticalChannel(channelId, guildConfig) {
-  return guildConfig.criticalChannelIds?.includes(channelId) ?? false;
+  return getCriticalChannelIds().includes(channelId);
 }
 
 function hasDangerousPermissions(permissionsBitField) {
@@ -45,5 +57,7 @@ module.exports = {
   isProtectedRole,
   isCriticalChannel,
   hasDangerousPermissions,
-  hasAdministrator
+  hasAdministrator,
+  getOwnerIds,
+  getCriticalChannelIds
 };

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 const GuildConfig = require("../models/GuildConfig");
 const backupService = require("../services/backupService");
-const { isOwnerOrCoOwner } = require("../utils/permissions");
+const { isOwnerOrCoOwner, getCriticalChannelIds } = require("../utils/permissions");
 const { successEmbed, dangerEmbed, neutralEmbed } = require("../utils/embeds");
 
 /**
@@ -18,7 +18,7 @@ module.exports = {
   async execute(interaction) {
     const config = await GuildConfig.findOne({ guildId: interaction.guild.id }).lean();
 
-    if (!isOwnerOrCoOwner(interaction.member, config || {})) {
+    if (!isOwnerOrCoOwner(interaction.member)) {
       await interaction.reply({
         embeds: [dangerEmbed("No permission", "Only the Owner or Co-Owner can run simulations.")],
         ephemeral: true
@@ -66,9 +66,10 @@ module.exports = {
     );
 
     // Recovery: critical channels configured
+    const criticalIds = getCriticalChannelIds();
     results.push(
-      config?.criticalChannelIds?.length
-        ? `✅ ${config.criticalChannelIds.length} critical channel(s) configured`
+      criticalIds.length
+        ? `✅ ${criticalIds.length} critical channel(s) configured`
         : "⚠️ No critical channels configured"
     );
 

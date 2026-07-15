@@ -7,6 +7,7 @@ const backupService = require("./backupService");
 const rollbackService = require("./rollbackService");
 const responsibilityChain = require("./responsibilityChain");
 const { generateIncidentId, logForensic } = require("./forensicsLogger");
+const { getOwnerIds } = require("../utils/permissions");
 const { emergencyEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
@@ -48,7 +49,8 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
   if (behavior.stripAdminFromStaff !== false) {
     await guild.members.fetch();
     for (const member of guild.members.cache.values()) {
-      if (member.id === config?.ownerId || member.id === config?.coOwnerId) continue;
+      const ownerIds = getOwnerIds();
+      if (ownerIds.includes(member.id)) continue;
       if (!member.permissions.has(PermissionsBitField.Flags.Administrator)) continue;
 
       const adminRoles = member.roles.cache.filter((r) => r.permissions.has(PermissionsBitField.Flags.Administrator));
@@ -106,7 +108,7 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
       .join("\n")
   );
 
-  for (const id of [config?.ownerId, config?.coOwnerId].filter(Boolean)) {
+  for (const id of getOwnerIds()) {
     guild.members
       .fetch(id)
       .then((m) => m.send({ embeds: [embed] }).catch(() => {}))

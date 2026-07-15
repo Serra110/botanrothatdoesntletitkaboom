@@ -4,10 +4,7 @@ const defaults = require("../config/defaults");
 const GuildConfigSchema = new mongoose.Schema(
   {
     guildId: { type: String, required: true, unique: true, index: true },
-    ownerId: { type: String, default: () => defaults.ownerId },
-    coOwnerId: { type: String, default: () => defaults.coOwnerId },
 
-    criticalChannelIds: { type: [String], default: () => [...defaults.criticalChannelIds] },
     protectedRoleIds: { type: [String], default: () => [...defaults.protectedRoleIds] },
     authorizedRoleIds: { type: [String], default: () => [...defaults.authorizedRoleIds] },
 

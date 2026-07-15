@@ -3,6 +3,7 @@ const Backup = require("../models/Backup");
 const GuildConfig = require("../models/GuildConfig");
 const backupService = require("./backupService");
 const logger = require("../utils/logger");
+const { getOwnerIds } = require("../utils/permissions");
 const { neutralEmbed } = require("../utils/embeds");
 
 /**
@@ -78,7 +79,8 @@ async function initiateRollbackFlow(guild) {
     return null;
   }
 
-  const owner = config?.ownerId ? await guild.members.fetch(config.ownerId).catch(() => null) : null;
+  const ownerIds = getOwnerIds();
+  const owner = ownerIds[0] ? await guild.members.fetch(ownerIds[0]).catch(() => null) : null;
 
   if (owner) {
     const list = backups

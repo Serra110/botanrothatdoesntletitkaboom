@@ -2,6 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const ApprovalRequest = require("../models/ApprovalRequest");
 const GuildConfig = require("../models/GuildConfig");
 const { warnEmbed } = require("../utils/embeds");
+const { getOwnerIds } = require("../utils/permissions");
 const logger = require("../utils/logger");
 
 /**
@@ -46,7 +47,7 @@ async function requestApproval(guild, action, targetData = {}, requestedById = n
       .join("\n")
   );
 
-  const recipients = [config?.ownerId, config?.coOwnerId].filter(Boolean);
+  const recipients = getOwnerIds();
   const targetChannel = config?.approvalChannelId ? guild.channels.cache.get(config.approvalChannelId) : null;
 
   if (targetChannel?.isTextBased()) {

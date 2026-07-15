@@ -4,10 +4,6 @@
  * and is editable via the /config command.
  */
 module.exports = {
-  ownerId: null,
-  coOwnerId: null,
-
-  criticalChannelIds: [], // e.g. #rules, #announcements, #staff, #logs
   protectedRoleIds: [], // e.g. Owner, Co-Owner, Admin, Moderator
   authorizedRoleIds: [], // roles that can act during lockdown (kick/ban/timeout)
 
