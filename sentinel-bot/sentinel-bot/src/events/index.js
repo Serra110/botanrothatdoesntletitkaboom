@@ -16,7 +16,7 @@ function registerAllEvents(client) {
   inviteEvents.register(client);
   interactionEvents.register(client);
 
-  logger.info("Todos os event handlers foram registados.");
+  logger.info("All event handlers registered.");
 }
 
 module.exports = { registerAllEvents };

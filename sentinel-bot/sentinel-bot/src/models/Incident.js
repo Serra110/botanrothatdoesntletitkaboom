@@ -29,8 +29,8 @@ const IncidentSchema = new mongoose.Schema(
 
     backupRestoredId: { type: mongoose.Schema.Types.ObjectId, ref: "Backup", default: null },
 
-    responseTimeMs: { type: Number, default: null }, // deteção -> primeira ação de contenção
-    recoveryTimeMs: { type: Number, default: null }, // deteção -> rollback concluído
+    responseTimeMs: { type: Number, default: null }, // detection -> first containment action
+    recoveryTimeMs: { type: Number, default: null }, // detection -> rollback completed
 
     resolved: { type: Boolean, default: false }
   },

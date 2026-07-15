@@ -1,17 +1,17 @@
 /**
- * Configuração por defeito para um novo servidor.
- * Tudo aqui é sobreposto pelo documento GuildConfig na base de dados
- * e é editável através do comando /config.
+ * Default configuration for a new server.
+ * Everything here is overridden by the GuildConfig document in the database
+ * and is editable via the /config command.
  */
 module.exports = {
   ownerId: null,
   coOwnerId: null,
 
-  criticalChannelIds: [], // ex: #rules, #announcements, #staff, #logs
-  protectedRoleIds: [], // ex: Owner, Co-Owner, Admin, Moderador
-  authorizedRoleIds: [], // roles que podem agir durante lockdown (kick/ban/timeout)
+  criticalChannelIds: [], // e.g. #rules, #announcements, #staff, #logs
+  protectedRoleIds: [], // e.g. Owner, Co-Owner, Admin, Moderator
+  authorizedRoleIds: [], // roles that can act during lockdown (kick/ban/timeout)
 
-  backupMessageChannelIds: [], // canais cujo conteúdo de mensagens é incluído no backup
+  backupMessageChannelIds: [], // channels whose message content is included in backups
   backupIntervalMinutes: 30,
   backupRetentionCount: 3,
 
@@ -24,7 +24,7 @@ module.exports = {
   threatPoints: {
     channelDelete: 50,
     categoryDelete: 100,
-    massChannelCreate: 80, // 5+ canais num curto intervalo
+    massChannelCreate: 80, // 5+ channels in a short interval
     grantAdministrator: 120,
     dangerousRoleCreate: 100,
     webhookCreate: 40,

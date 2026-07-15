@@ -18,19 +18,19 @@ function register(client) {
     const actorId = entry?.executor?.id;
     if (!actorId) return;
 
-    await logForensic(role.guild, { actorId, action: `Role criada: ${role.name}` });
+    await logForensic(role.guild, { actorId, action: `Role created: ${role.name}` });
 
     if (hasDangerousPermissions(role.permissions)) {
       const approved = await approvalService.requestApproval(
         role.guild,
         "CREATE_HIGH_PERMISSION_ROLE",
-        { summary: `Role "${role.name}" com permissões elevadas` },
+        { summary: `Role "${role.name}" with elevated permissions` },
         actorId
       );
 
       if (!approved) {
-        await role.delete("Sentinel: criação de role perigosa não aprovada").catch(() => {});
-        logger.warn(`Role perigosa "${role.name}" removida por falta de aprovação.`);
+        await role.delete("Sentinel: dangerous role creation not approved").catch(() => {});
+        logger.warn(`Dangerous role "${role.name}" removed due to lack of approval.`);
         return;
       }
 
@@ -40,7 +40,7 @@ function register(client) {
         "DANGEROUS_ROLE_CREATE",
         config?.threatPoints?.dangerousRoleCreate ?? 100
       );
-      await maybeEscalate(role.guild, actorId, result.triggered, `Role perigosa criada: ${role.name}`);
+      await maybeEscalate(role.guild, actorId, result.triggered, `Dangerous role created: ${role.name}`);
     }
   });
 
@@ -52,18 +52,18 @@ function register(client) {
     const actorId = entry?.executor?.id;
 
     if (await honeypotService.isHoneypotTriggered(role.guild.id, { roleId: role.id })) {
-      await triggerHoneypotAlert(role.guild, actorId, "role honeypot apagada");
+      await triggerHoneypotAlert(role.guild, actorId, "honeypot role deleted");
       return;
     }
 
     if (!actorId) return;
 
-    await logForensic(role.guild, { actorId, action: `Role apagada: ${role.name}` });
+    await logForensic(role.guild, { actorId, action: `Role deleted: ${role.name}` });
 
     if (isProtectedRole(role.id, config || {})) {
       await logForensic(role.guild, {
         actorId,
-        action: "⚠️ Role protegida apagada sem aprovação prévia",
+        action: "⚠️ Protected role deleted without prior approval",
         detail: { summary: role.name }
       });
     }
@@ -77,39 +77,39 @@ function register(client) {
     const actorId = entry?.executor?.id;
 
     if (await honeypotService.isHoneypotTriggered(newRole.guild.id, { roleId: newRole.id })) {
-      await triggerHoneypotAlert(newRole.guild, actorId, "role honeypot alterada");
+      await triggerHoneypotAlert(newRole.guild, actorId, "honeypot role updated");
       return;
     }
 
     if (!actorId) return;
 
     const changes = [];
-    if (oldRole.name !== newRole.name) changes.push(`nome: ${oldRole.name} → ${newRole.name}`);
-    if (oldRole.color !== newRole.color) changes.push("cor alterada");
-    if (oldRole.position !== newRole.position) changes.push("posição alterada");
+    if (oldRole.name !== newRole.name) changes.push(`name: ${oldRole.name} → ${newRole.name}`);
+    if (oldRole.color !== newRole.color) changes.push("color changed");
+    if (oldRole.position !== newRole.position) changes.push("position changed");
 
     const gainedAdmin = !hasAdministrator(oldRole.permissions) && hasAdministrator(newRole.permissions);
     const permissionsChanged = !oldRole.permissions.equals(newRole.permissions);
 
-    if (permissionsChanged) changes.push("permissões alteradas");
+    if (permissionsChanged) changes.push("permissions changed");
 
     if (gainedAdmin) {
-      changes.push("🚨 Administrator concedido à role");
+      changes.push("🚨 Administrator granted to role");
 
       const approved = await approvalService.requestApproval(
         newRole.guild,
         "CREATE_HIGH_PERMISSION_ROLE",
-        { summary: `Role "${newRole.name}" recebeu Administrator` },
+        { summary: `Role "${newRole.name}" received Administrator` },
         actorId
       );
 
       if (!approved) {
         await newRole
-          .setPermissions(oldRole.permissions, "Sentinel: concessão de Administrator não aprovada")
+          .setPermissions(oldRole.permissions, "Sentinel: Administrator grant not approved")
           .catch(() => {});
       } else {
-        // Regista a concessão para reconstrução da cadeia de responsabilidade
-        // (todos os membros com esta role passam a estar associados ao actorId)
+        // Record the grant for responsibility chain reconstruction
+        // (all members with this role become associated with actorId)
         const responsibilityChain = require("../services/responsibilityChain");
         for (const member of newRole.members.values()) {
           responsibilityChain.recordGrant(newRole.guild.id, {
@@ -126,17 +126,17 @@ function register(client) {
         "GRANT_ADMINISTRATOR",
         config?.threatPoints?.grantAdministrator ?? 120
       );
-      await maybeEscalate(newRole.guild, actorId, result.triggered, `Administrator concedido via role ${newRole.name}`);
+      await maybeEscalate(newRole.guild, actorId, result.triggered, `Administrator granted via role ${newRole.name}`);
     }
 
     if (isProtectedRole(newRole.id, config || {}) && changes.length) {
       await logForensic(newRole.guild, {
         actorId,
-        action: `⚠️ Role protegida alterada: ${newRole.name}`,
+        action: `⚠️ Protected role updated: ${newRole.name}`,
         detail: { summary: changes.join(", ") }
       });
     } else if (changes.length) {
-      await logForensic(newRole.guild, { actorId, action: `Role atualizada: ${newRole.name}`, detail: { summary: changes.join(", ") } });
+      await logForensic(newRole.guild, { actorId, action: `Role updated: ${newRole.name}`, detail: { summary: changes.join(", ") } });
     }
   });
 }

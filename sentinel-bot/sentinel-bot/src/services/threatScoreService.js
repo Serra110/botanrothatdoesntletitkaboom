@@ -3,8 +3,8 @@ const GuildConfig = require("../models/GuildConfig");
 const logger = require("../utils/logger");
 
 /**
- * Adiciona pontos de risco a um utilizador e verifica se algum limiar
- * foi ultrapassado (alerta / quarentena / emergência).
+ * Adds threat points to a user and checks if any threshold
+ * has been exceeded (alert / quarantine / emergency).
  *
  * @returns {{ score: number, triggered: 'alert'|'quarantine'|'emergency'|null }}
  */
@@ -42,9 +42,9 @@ async function resetScore(guildId, userId) {
 }
 
 /**
- * Deteta rajadas de ações do mesmo tipo num curto intervalo (ex: criar
- * 5 canais, ou banir vários membros de seguida), contando entradas
- * recentes no histórico.
+ * Detects bursts of the same action type in a short interval (e.g. creating
+ * 5 channels, or banning multiple members in succession), by counting
+ * recent entries in the history.
  */
 async function countRecentActions(guildId, userId, actionName, windowMs) {
   const doc = await ThreatScore.findOne({ guildId, userId }).lean();

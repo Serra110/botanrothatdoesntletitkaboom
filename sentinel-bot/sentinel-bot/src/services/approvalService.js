@@ -5,13 +5,13 @@ const { warnEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
 /**
- * Cria um pedido de aprovação, envia-o ao Owner/Co-Owner (ou canal de
- * aprovações), e espera pelo tempo configurado. Devolve uma Promise que
- * resolve com true (aprovado) ou false (rejeitado/ignorado).
+ * Creates an approval request, sends it to the Owner/Co-Owner (or approval
+ * channel), and waits for the configured time. Returns a Promise that
+ * resolves with true (approved) or false (rejected/ignored).
  *
  * @param {import('discord.js').Guild} guild
- * @param {string} action - identificador da ação (ex: DELETE_CRITICAL_CHANNEL)
- * @param {object} targetData - contexto da ação (nomes, ids, etc.)
+ * @param {string} action - action identifier (e.g. DELETE_CRITICAL_CHANNEL)
+ * @param {object} targetData - action context (names, ids, etc.)
  * @param {string|null} requestedById
  */
 async function requestApproval(guild, action, targetData = {}, requestedById = null) {
@@ -30,17 +30,17 @@ async function requestApproval(guild, action, targetData = {}, requestedById = n
   const requestId = request._id.toString();
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`approval:approve:${requestId}`).setLabel("Aprovar").setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`approval:reject:${requestId}`).setLabel("Rejeitar").setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`approval:approve:${requestId}`).setLabel("Approve").setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`approval:reject:${requestId}`).setLabel("Reject").setStyle(ButtonStyle.Danger)
   );
 
   const embed = warnEmbed(
-    "🔐 Pedido de Aprovação",
+    "🔐 Approval Request",
     [
-      `**Ação:** ${action}`,
-      requestedById ? `**Solicitado por:** <@${requestedById}>` : null,
-      targetData?.summary ? `**Detalhe:** ${targetData.summary}` : null,
-      `**Expira em:** ${waitSeconds}s`
+      `**Action:** ${action}`,
+      requestedById ? `**Requested by:** <@${requestedById}>` : null,
+      targetData?.summary ? `**Detail:** ${targetData.summary}` : null,
+      `**Expires in:** ${waitSeconds}s`
     ]
       .filter(Boolean)
       .join("\n")
@@ -66,18 +66,18 @@ async function requestApproval(guild, action, targetData = {}, requestedById = n
       if (current && current.status === "pending") {
         current.status = "expired";
         await current.save();
-        logger.info(`Pedido de aprovação ${requestId} expirou sem resposta -> cancelado.`);
+        logger.info(`Approval request ${requestId} expired without response -> cancelled.`);
       }
       resolve(false);
     }, waitSeconds * 1000);
 
-    // Guarda o resolver para o handler de interação poder concluir mais cedo
+    // Stores the resolver so the interaction handler can resolve earlier
     pendingResolvers.set(requestId, { resolve, timeout });
   });
 }
 
-// Mapa em memória usado pelo handler de botões (interactionCreate) para
-// resolver a Promise assim que o Owner/Co-Owner decide.
+// In-memory map used by the button handler (interactionCreate) to
+// resolve the Promise as soon as the Owner/Co-Owner decides.
 const pendingResolvers = new Map();
 
 async function decideApproval(requestId, approved, decidedById) {

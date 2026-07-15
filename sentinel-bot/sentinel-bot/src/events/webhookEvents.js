@@ -6,10 +6,10 @@ const { logForensic } = require("../services/forensicsLogger");
 const { maybeEscalate } = require("./channelEvents");
 
 /**
- * discord.js expõe apenas o evento genérico "webhooksUpdate" (indica
- * que algo mudou nos webhooks de um canal, sem detalhe do quê). Por
- * isso recorremos sempre ao audit log para reconstruir criação,
- * edição ou remoção.
+ * discord.js only exposes the generic "webhooksUpdate" event (indicates
+ * something changed in a channel's webhooks, without detail on what).
+ * Therefore we always rely on the audit log to reconstruct creation,
+ * editing, or removal.
  */
 function register(client) {
   client.on("webhooksUpdate", async (channel) => {
@@ -22,7 +22,7 @@ function register(client) {
 
     if (createEntry) {
       const actorId = createEntry.executor?.id;
-      await logForensic(channel.guild, { actorId, action: `Webhook criado em #${channel.name}` });
+      await logForensic(channel.guild, { actorId, action: `Webhook created in #${channel.name}` });
 
       if (actorId) {
         const result = await threatScoreService.addThreatPoints(
@@ -31,21 +31,21 @@ function register(client) {
           "WEBHOOK_CREATE",
           config?.threatPoints?.webhookCreate ?? 40
         );
-        await maybeEscalate(channel.guild, actorId, result.triggered, `Webhook criado em #${channel.name}`);
+        await maybeEscalate(channel.guild, actorId, result.triggered, `Webhook created in #${channel.name}`);
       }
     }
 
     if (updateEntry) {
       await logForensic(channel.guild, {
         actorId: updateEntry.executor?.id,
-        action: `Webhook alterado em #${channel.name}`
+        action: `Webhook updated in #${channel.name}`
       });
     }
 
     if (deleteEntry) {
       await logForensic(channel.guild, {
         actorId: deleteEntry.executor?.id,
-        action: `Webhook removido em #${channel.name}`
+        action: `Webhook removed in #${channel.name}`
       });
     }
   });

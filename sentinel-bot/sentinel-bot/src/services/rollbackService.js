@@ -6,17 +6,17 @@ const logger = require("../utils/logger");
 const { neutralEmbed } = require("../utils/embeds");
 
 /**
- * Aplica um backup ao servidor: recria categorias/canais/roles em
- * falta e restaura permissões básicas. Esta é uma reconstrução
- * best-effort — Discord não permite "desfazer" diretamente, por isso
- * o bot recria o que falta e ajusta o que existe.
+ * Applies a backup to the server: recreates missing
+ * categories/channels/roles and restores basic permissions. This is a
+ * best-effort reconstruction — Discord doesn't allow "undoing" directly,
+ * so the bot recreates what's missing and adjusts what exists.
  */
 async function applyBackup(guild, backup) {
   backupService.markRollback(guild.id, true);
   try {
     const { data } = backup;
 
-    // 1. Roles em falta (ignora @everyone e roles geridas por integrações)
+    // 1. Missing roles (ignores @everyone and integration-managed roles)
     const existingRoleIds = new Set(guild.roles.cache.keys());
     for (const roleData of data.roles) {
       if (existingRoleIds.has(roleData.id)) continue;
@@ -28,21 +28,21 @@ async function applyBackup(guild, backup) {
           hoist: roleData.hoist,
           permissions: BigInt(roleData.permissions),
           mentionable: roleData.mentionable,
-          reason: "Rollback Sentinel: role recriada a partir de backup"
+          reason: "Sentinel rollback: role recreated from backup"
         })
-        .catch((e) => logger.error(`Falha ao recriar role ${roleData.name}: ${e.message}`));
+        .catch((e) => logger.error(`Failed to recreate role ${roleData.name}: ${e.message}`));
     }
 
-    // 2. Categorias em falta
+    // 2. Missing categories
     const existingChannelIds = new Set(guild.channels.cache.keys());
     for (const catData of data.categories) {
       if (existingChannelIds.has(catData.id)) continue;
       await guild.channels
-        .create({ name: catData.name, type: ChannelType.GuildCategory, reason: "Rollback Sentinel" })
-        .catch((e) => logger.error(`Falha ao recriar categoria ${catData.name}: ${e.message}`));
+        .create({ name: catData.name, type: ChannelType.GuildCategory, reason: "Sentinel rollback" })
+        .catch((e) => logger.error(`Failed to recreate category ${catData.name}: ${e.message}`));
     }
 
-    // 3. Canais em falta
+    // 3. Missing channels
     for (const chData of data.channels) {
       if (existingChannelIds.has(chData.id)) continue;
       await guild.channels
@@ -52,21 +52,21 @@ async function applyBackup(guild, backup) {
           topic: chData.topic || undefined,
           nsfw: chData.nsfw,
           rateLimitPerUser: chData.rateLimitPerUser,
-          reason: "Rollback Sentinel: canal recriado a partir de backup"
+          reason: "Sentinel rollback: channel recreated from backup"
         })
-        .catch((e) => logger.error(`Falha ao recriar canal ${chData.name}: ${e.message}`));
+        .catch((e) => logger.error(`Failed to recreate channel ${chData.name}: ${e.message}`));
     }
 
-    logger.info(`Rollback aplicado em ${guild.id} a partir do backup ${backup._id}`);
+    logger.info(`Rollback applied in ${guild.id} from backup ${backup._id}`);
   } finally {
     backupService.markRollback(guild.id, false);
   }
 }
 
 /**
- * Fluxo de rollback pós-emergência: dá ao Owner N minutos para
- * escolher um backup; caso contrário, restaura automaticamente o mais
- * recente válido (secção 12).
+ * Post-emergency rollback flow: gives the Owner N minutes to
+ * choose a backup; otherwise, automatically restores the most
+ * recent valid one (section 12).
  */
 async function initiateRollbackFlow(guild) {
   const config = await GuildConfig.findOne({ guildId: guild.id }).lean();
@@ -74,7 +74,7 @@ async function initiateRollbackFlow(guild) {
 
   const backups = await backupService.listBackups(guild.id);
   if (!backups.length) {
-    logger.warn(`Sem backups disponíveis para rollback em ${guild.id}`);
+    logger.warn(`No backups available for rollback in ${guild.id}`);
     return null;
   }
 
@@ -83,12 +83,12 @@ async function initiateRollbackFlow(guild) {
   if (owner) {
     const list = backups
       .slice(0, 5)
-      .map((b, i) => `**${i + 1}.** ${new Date(b.createdAt).toLocaleString("pt-PT")} ${b.manual ? "(manual)" : ""}`)
+      .map((b, i) => `**${i + 1}.** ${new Date(b.createdAt).toLocaleString("en-US")} ${b.manual ? "(manual)" : ""}`)
       .join("\n");
 
     const embed = neutralEmbed(
-      "🔄 Escolha um backup para restaurar",
-      `Usa \`/rollback\` no servidor para escolher, ou não faças nada e o backup mais recente será restaurado automaticamente em ${windowMinutes} minutos.\n\n${list}`
+      "🔄 Choose a backup to restore",
+      `Use \`/rollback\` in the server to choose, or do nothing and the most recent backup will be automatically restored in ${windowMinutes} minutes.\n\n${list}`
     );
 
     owner.send({ embeds: [embed] }).catch(() => {});
@@ -110,8 +110,8 @@ async function initiateRollbackFlow(guild) {
 const pendingRollbacks = new Map();
 
 /**
- * Chamado pelo comando /rollback quando o Owner escolhe manualmente,
- * cancelando o timeout automático.
+ * Called by the /rollback command when the Owner chooses manually,
+ * cancelling the automatic timeout.
  */
 async function manualRollback(guild, backupId) {
   const backup = await Backup.findById(backupId);

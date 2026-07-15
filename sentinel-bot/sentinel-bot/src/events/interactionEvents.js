@@ -20,7 +20,7 @@ function register(client) {
 
         if (!request) {
           await interaction.update({
-            embeds: [dangerEmbed("Pedido expirado ou já decidido", null)],
+            embeds: [dangerEmbed("Request expired or already decided", null)],
             components: []
           });
           return;
@@ -29,16 +29,16 @@ function register(client) {
         await interaction.update({
           embeds: [
             approved
-              ? successEmbed("✅ Aprovado", `Ação **${request.action}** aprovada por <@${interaction.user.id}>.`)
-              : dangerEmbed("❌ Rejeitado", `Ação **${request.action}** rejeitada por <@${interaction.user.id}>.`)
+              ? successEmbed("✅ Approved", `Action **${request.action}** approved by <@${interaction.user.id}>.`)
+              : dangerEmbed("❌ Rejected", `Action **${request.action}** rejected by <@${interaction.user.id}>.`)
           ],
           components: []
         });
       }
     } catch (err) {
-      logger.error(`Erro ao processar interação: ${err.message}`);
+      logger.error(`Error processing interaction: ${err.message}`);
       if (interaction.isRepliable() && !interaction.replied) {
-        await interaction.reply({ content: "Ocorreu um erro ao processar este pedido.", ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: "An error occurred while processing this request.", ephemeral: true }).catch(() => {});
       }
     }
   });

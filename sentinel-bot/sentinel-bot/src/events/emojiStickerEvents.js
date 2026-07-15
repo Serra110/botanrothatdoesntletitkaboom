@@ -8,7 +8,7 @@ function register(client) {
     const config = await GuildConfig.findOne({ guildId: emoji.guild.id }).lean();
     if (config?.maintenanceMode) return;
     const entry = await fetchAuditEntry(emoji.guild, AuditLogEvent.EmojiCreate, emoji.id);
-    await logForensic(emoji.guild, { actorId: entry?.executor?.id, action: `Emoji criado: ${emoji.name}` });
+    await logForensic(emoji.guild, { actorId: entry?.executor?.id, action: `Emoji created: ${emoji.name}` });
   });
 
   client.on("emojiUpdate", async (oldEmoji, newEmoji) => {
@@ -17,7 +17,7 @@ function register(client) {
     const entry = await fetchAuditEntry(newEmoji.guild, AuditLogEvent.EmojiUpdate, newEmoji.id);
     await logForensic(newEmoji.guild, {
       actorId: entry?.executor?.id,
-      action: `Emoji alterado: ${oldEmoji.name} → ${newEmoji.name}`
+      action: `Emoji updated: ${oldEmoji.name} → ${newEmoji.name}`
     });
   });
 
@@ -25,14 +25,14 @@ function register(client) {
     const config = await GuildConfig.findOne({ guildId: emoji.guild.id }).lean();
     if (config?.maintenanceMode) return;
     const entry = await fetchAuditEntry(emoji.guild, AuditLogEvent.EmojiDelete, emoji.id);
-    await logForensic(emoji.guild, { actorId: entry?.executor?.id, action: `Emoji apagado: ${emoji.name}` });
+    await logForensic(emoji.guild, { actorId: entry?.executor?.id, action: `Emoji deleted: ${emoji.name}` });
   });
 
   client.on("stickerCreate", async (sticker) => {
     const config = await GuildConfig.findOne({ guildId: sticker.guild.id }).lean();
     if (config?.maintenanceMode) return;
     const entry = await fetchAuditEntry(sticker.guild, AuditLogEvent.StickerCreate, sticker.id);
-    await logForensic(sticker.guild, { actorId: entry?.executor?.id, action: `Sticker criado: ${sticker.name}` });
+    await logForensic(sticker.guild, { actorId: entry?.executor?.id, action: `Sticker created: ${sticker.name}` });
   });
 
   client.on("stickerUpdate", async (oldSticker, newSticker) => {
@@ -41,7 +41,7 @@ function register(client) {
     const entry = await fetchAuditEntry(newSticker.guild, AuditLogEvent.StickerUpdate, newSticker.id);
     await logForensic(newSticker.guild, {
       actorId: entry?.executor?.id,
-      action: `Sticker alterado: ${oldSticker.name} → ${newSticker.name}`
+      action: `Sticker updated: ${oldSticker.name} → ${newSticker.name}`
     });
   });
 
@@ -49,7 +49,7 @@ function register(client) {
     const config = await GuildConfig.findOne({ guildId: sticker.guild.id }).lean();
     if (config?.maintenanceMode) return;
     const entry = await fetchAuditEntry(sticker.guild, AuditLogEvent.StickerDelete, sticker.id);
-    await logForensic(sticker.guild, { actorId: entry?.executor?.id, action: `Sticker apagado: ${sticker.name}` });
+    await logForensic(sticker.guild, { actorId: entry?.executor?.id, action: `Sticker deleted: ${sticker.name}` });
   });
 }
 

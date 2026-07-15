@@ -45,16 +45,16 @@ function serializeRole(role) {
 }
 
 /**
- * Cria um backup completo do servidor. Nunca deve ser chamado durante
- * emergência ou rollback (secção 11).
+ * Creates a full backup of the server. Must never be called during
+ * emergency or rollback (section 11).
  */
 async function createBackup(guild, { manual = false } = {}) {
   if (emergencyInProgress.has(guild.id)) {
-    logger.warn(`Backup ignorado em ${guild.id}: emergência em curso.`);
+    logger.warn(`Backup skipped in ${guild.id}: emergency in progress.`);
     return null;
   }
   if (rollbackInProgress.has(guild.id)) {
-    logger.warn(`Backup ignorado em ${guild.id}: rollback em curso.`);
+    logger.warn(`Backup skipped in ${guild.id}: rollback in progress.`);
     return null;
   }
 
@@ -75,10 +75,10 @@ async function createBackup(guild, { manual = false } = {}) {
     const fetched = await guild.fetchWebhooks();
     webhooks = fetched.map((w) => ({ id: w.id, name: w.name, channelId: w.channelId }));
   } catch (e) {
-    logger.debug(`Não foi possível listar webhooks: ${e.message}`);
+    logger.debug(`Could not list webhooks: ${e.message}`);
   }
 
-  // Mensagens: apenas dos canais explicitamente configurados (secção 11)
+  // Messages: only from explicitly configured channels (section 11)
   const messages = {};
   if (config?.backupMessageChannelIds?.length) {
     for (const channelId of config.backupMessageChannelIds) {
@@ -92,7 +92,7 @@ async function createBackup(guild, { manual = false } = {}) {
           createdAt: m.createdAt
         }));
       } catch (e) {
-        logger.debug(`Não foi possível salvar mensagens de ${channelId}: ${e.message}`);
+        logger.debug(`Could not save messages from ${channelId}: ${e.message}`);
       }
     }
   }
@@ -116,12 +116,12 @@ async function createBackup(guild, { manual = false } = {}) {
 
   await rotateBackups(guild.id, config?.backupRetentionCount ?? 3);
 
-  logger.info(`Backup ${manual ? "manual" : "automático"} criado para ${guild.id} (${backup._id})`);
+  logger.info(`${manual ? "Manual" : "Automatic"} backup created for ${guild.id} (${backup._id})`);
   return backup;
 }
 
 /**
- * Mantém apenas N backups por servidor, removendo o mais antigo.
+ * Keeps only N backups per server, removing the oldest.
  */
 async function rotateBackups(guildId, retentionCount) {
   const backups = await Backup.find({ guildId }).sort({ createdAt: -1 });

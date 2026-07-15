@@ -11,14 +11,14 @@ const { emergencyEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
 /**
- * Ativa o modo de emergência (secção 7). responsibleUserIds deve
- * incluir todos os utilizadores identificados como responsáveis
- * (principal + secundários) para serem colocados em quarentena.
+ * Activates emergency mode (section 7). responsibleUserIds must
+ * include all users identified as responsible (primary + secondary)
+ * to be quarantined.
  */
 async function activateEmergency(guild, { reason, responsibleUserIds = [], recentPrivilegeGranteeIds = [] } = {}) {
   const config = await GuildConfig.findOne({ guildId: guild.id });
   if (config?.emergencyActive) {
-    logger.debug(`Emergência já ativa em ${guild.id}, a ignorar novo trigger.`);
+    logger.debug(`Emergency already active in ${guild.id}, ignoring new trigger.`);
     return null;
   }
 
@@ -39,9 +39,9 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
     secondaryResponsible: responsibleUserIds.slice(1)
   });
 
-  await logForensic(guild, { incidentId, action: "EMERGÊNCIA ATIVADA", detail: { summary: reason } });
+  await logForensic(guild, { incidentId, action: "EMERGENCY ACTIVATED", detail: { summary: reason } });
 
-  // 1. Remove roles administrativas do staff (exceto Owner/Co-Owner)
+  // 1. Remove admin roles from staff (except Owner/Co-Owner)
   const behavior = config?.emergencyBehavior || {};
   const strippedAdmins = [];
 
@@ -53,7 +53,7 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
 
       const adminRoles = member.roles.cache.filter((r) => r.permissions.has(PermissionsBitField.Flags.Administrator));
       for (const role of adminRoles.values()) {
-        await member.roles.remove(role, "Sentinel: emergência - remoção de Administrator").catch(() => {});
+        await member.roles.remove(role, "Sentinel: emergency - Administrator removed").catch(() => {});
       }
       strippedAdmins.push(member.id);
     }
@@ -61,11 +61,11 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
 
   await logForensic(guild, {
     incidentId,
-    action: "Admin removido",
-    detail: { summary: strippedAdmins.map((id) => `<@${id}>`).join(", ") || "nenhum" }
+    action: "Admin removed",
+    detail: { summary: strippedAdmins.map((id) => `<@${id}>`).join(", ") || "none" }
   });
 
-  // 2. Quarentena dos responsáveis e de quem recebeu permissões perigosas recentemente
+  // 2. Quarantine responsible users and those who recently received dangerous permissions
   const toQuarantine = new Set();
   if (behavior.quarantineResponsible !== false) {
     responsibleUserIds.forEach((id) => toQuarantine.add(id));
@@ -76,31 +76,31 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
 
   for (const userId of toQuarantine) {
     const member = await guild.members.fetch(userId).catch(() => null);
-    if (member) await quarantineService.quarantineMember(guild, member, `Emergência: ${reason}`, incidentId);
+    if (member) await quarantineService.quarantineMember(guild, member, `Emergency: ${reason}`, incidentId);
   }
 
   await logForensic(guild, {
     incidentId,
-    action: "Utilizadores em quarentena",
-    detail: { summary: [...toQuarantine].map((id) => `<@${id}>`).join(", ") || "nenhum" }
+    action: "Users quarantined",
+    detail: { summary: [...toQuarantine].map((id) => `<@${id}>`).join(", ") || "none" }
   });
 
-  // 3. Lockdown do servidor
+  // 3. Server lockdown
   if (behavior.lockdownServer !== false) {
     await lockdownService.enableLockdown(guild);
-    await logForensic(guild, { incidentId, action: "Servidor em Lockdown" });
+    await logForensic(guild, { incidentId, action: "Server Lockdown" });
   }
 
   incident.responseTimeMs = Date.now() - detectionTime;
   await incident.save();
 
-  // Notifica Owner/Co-Owner
+  // Notify Owner/Co-Owner
   const embed = emergencyEmbed(
-    "🚨 MODO DE EMERGÊNCIA ATIVADO",
+    "🚨 EMERGENCY MODE ACTIVATED",
     [
-      `**Motivo:** ${reason}`,
-      `**Incidente:** \`${incidentId}\``,
-      responsibleUserIds.length ? `**Responsáveis:** ${responsibleUserIds.map((id) => `<@${id}>`).join(", ")}` : null
+      `**Reason:** ${reason}`,
+      `**Incident:** \`${incidentId}\``,
+      responsibleUserIds.length ? `**Responsible:** ${responsibleUserIds.map((id) => `<@${id}>`).join(", ")}` : null
     ]
       .filter(Boolean)
       .join("\n")
@@ -113,14 +113,14 @@ async function activateEmergency(guild, { reason, responsibleUserIds = [], recen
       .catch(() => {});
   }
 
-  // 4. Inicia fluxo de rollback (não bloqueante)
+  // 4. Initiate rollback flow (non-blocking)
   rollbackService.initiateRollbackFlow(guild).then(async (backup) => {
     incident.endedAt = new Date();
     incident.recoveryTimeMs = Date.now() - detectionTime;
     incident.backupRestoredId = backup?._id || null;
     incident.resolved = true;
     await incident.save();
-    await logForensic(guild, { incidentId, action: "Rollback concluído" });
+    await logForensic(guild, { incidentId, action: "Rollback completed" });
   });
 
   return incident;
@@ -135,7 +135,7 @@ async function deactivateEmergency(guild) {
   await config.save();
 
   await lockdownService.disableLockdown(guild);
-  logger.info(`Emergência desativada manualmente em ${guild.id}`);
+  logger.info(`Emergency deactivated manually in ${guild.id}`);
 }
 
 module.exports = { activateEmergency, deactivateEmergency };

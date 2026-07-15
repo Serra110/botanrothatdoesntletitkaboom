@@ -1,14 +1,14 @@
 const { AuditLogEvent } = require("discord.js");
 
 /**
- * Vai buscar a entrada mais recente e relevante do audit log para
- * identificar quem executou uma ação (Discord não indica isto
- * diretamente nos eventos de gateway).
+ * Fetches the most recent and relevant audit log entry to
+ * identify who executed an action (Discord doesn't indicate this
+ * directly in gateway events).
  *
  * @param {import('discord.js').Guild} guild
  * @param {AuditLogEvent} type
- * @param {string|null} targetId - filtra pela entrada cujo target.id corresponda
- * @param {number} maxAgeMs - ignora entradas mais antigas que isto (evita atribuir ações antigas)
+ * @param {string|null} targetId - filters by entry whose target.id matches
+ * @param {number} maxAgeMs - ignores entries older than this (prevents attributing old actions)
  */
 async function fetchAuditEntry(guild, type, targetId = null, maxAgeMs = 5000) {
   try {

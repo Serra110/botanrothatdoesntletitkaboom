@@ -7,15 +7,15 @@ function register(client) {
     if (config?.maintenanceMode) return;
     await logForensic(invite.guild, {
       actorId: invite.inviter?.id,
-      action: `Convite criado: ${invite.code}`,
-      detail: { summary: `Canal: #${invite.channel?.name}` }
+      action: `Invite created: ${invite.code}`,
+      detail: { summary: `Channel: #${invite.channel?.name}` }
     });
   });
 
   client.on("inviteDelete", async (invite) => {
     const config = await GuildConfig.findOne({ guildId: invite.guild.id }).lean();
     if (config?.maintenanceMode) return;
-    await logForensic(invite.guild, { action: `Convite removido: ${invite.code}` });
+    await logForensic(invite.guild, { action: `Invite removed: ${invite.code}` });
   });
 }
 

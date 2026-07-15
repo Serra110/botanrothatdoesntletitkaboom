@@ -4,18 +4,18 @@ const { neutralEmbed } = require("../utils/embeds");
 const logger = require("../utils/logger");
 
 /**
- * Regista uma linha forense. Se incidentId for fornecido, adiciona a
- * ação ao incidente correspondente. Envia sempre também para o canal
- * de logs configurado, se existir.
+ * Logs a forensic line. If incidentId is provided, adds the
+ * action to the corresponding incident. Always also sends to the
+ * configured log channel, if it exists.
  */
 async function logForensic(guild, { incidentId = null, actorId = null, action, detail = {} }) {
-  logger.info(`[Forense][${guild.id}] ${action} ${actorId ? `por ${actorId}` : ""}`);
+  logger.info(`[Forensic][${guild.id}] ${action} ${actorId ? `by ${actorId}` : ""}`);
 
   if (incidentId) {
     await Incident.updateOne(
       { incidentId },
       { $push: { actions: { actorId, action, detail, timestamp: new Date() } } }
-    ).catch((e) => logger.error(`Falha ao gravar ação forense: ${e.message}`));
+    ).catch((e) => logger.error(`Failed to save forensic action: ${e.message}`));
   }
 
   const config = await GuildConfig.findOne({ guildId: guild.id }).lean().catch(() => null);
@@ -25,9 +25,9 @@ async function logForensic(guild, { incidentId = null, actorId = null, action, d
   if (!channel?.isTextBased()) return;
 
   const lines = [
-    actorId ? `**Ator:** <@${actorId}>` : null,
-    detail?.summary ? `**Detalhe:** ${detail.summary}` : null,
-    incidentId ? `**Incidente:** \`${incidentId}\`` : null
+    actorId ? `**Actor:** <@${actorId}>` : null,
+    detail?.summary ? `**Detail:** ${detail.summary}` : null,
+    incidentId ? `**Incident:** \`${incidentId}\`` : null
   ].filter(Boolean);
 
   const embed = neutralEmbed(action, lines.join("\n") || null);

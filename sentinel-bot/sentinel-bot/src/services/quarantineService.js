@@ -4,8 +4,8 @@ const GuildConfig = require("../models/GuildConfig");
 const logger = require("../utils/logger");
 
 /**
- * Garante que existe uma role de quarentena no servidor; cria uma se
- * não existir e configura os permission overwrites necessários.
+ * Ensures a quarantine role exists on the server; creates one if
+ * it doesn't exist and sets up the necessary permission overwrites.
  */
 async function ensureQuarantineRole(guild, config) {
   if (config.quarantineRoleId) {
@@ -14,13 +14,13 @@ async function ensureQuarantineRole(guild, config) {
   }
 
   const role = await guild.roles.create({
-    name: "Quarentena (Sentinel)",
+    name: "Quarantine (Sentinel)",
     color: "DarkGrey",
     permissions: [],
-    reason: "Criação automática da role de quarentena pelo Sentinel"
+    reason: "Automatic quarantine role creation by Sentinel"
   });
 
-  // Bloqueia envio de mensagens e interação em todos os canais de texto
+  // Block message sending and interaction in all text channels
   await Promise.all(
     guild.channels.cache
       .filter((c) => c.type === ChannelType.GuildText || c.type === ChannelType.GuildVoice)
@@ -37,16 +37,16 @@ async function ensureQuarantineRole(guild, config) {
   );
 
   await GuildConfig.updateOne({ guildId: guild.id }, { $set: { quarantineRoleId: role.id } });
-  logger.info(`Role de quarentena criada em ${guild.id}: ${role.id}`);
+  logger.info(`Quarantine role created in ${guild.id}: ${role.id}`);
 
   return role;
 }
 
 /**
- * Coloca um membro em quarentena: guarda as roles atuais, remove-as
- * (exceto @everyone) e atribui a role de quarentena.
+ * Quarantines a member: saves current roles, removes them
+ * (except @everyone), and assigns the quarantine role.
  */
-async function quarantineMember(guild, member, reason = "Comportamento suspeito", incidentId = null) {
+async function quarantineMember(guild, member, reason = "Suspicious behavior", incidentId = null) {
   const config = await GuildConfig.findOne({ guildId: guild.id }).lean();
   const role = await ensureQuarantineRole(guild, config);
 
@@ -58,16 +58,16 @@ async function quarantineMember(guild, member, reason = "Comportamento suspeito"
     { upsert: true, new: true }
   );
 
-  await member.roles.set([role.id]).catch((e) => logger.error(`Falha ao aplicar quarentena: ${e.message}`));
+  await member.roles.set([role.id]).catch((e) => logger.error(`Failed to apply quarantine: ${e.message}`));
 
-  logger.info(`Utilizador ${member.id} colocado em quarentena em ${guild.id} (${reason})`);
+  logger.info(`User ${member.id} quarantined in ${guild.id} (${reason})`);
 }
 
 /**
- * Remove a quarentena. Se innocent=true, restaura as roles anteriores.
- * Caso contrário, mantém a role de quarentena até decisão manual
- * (é apenas marcado como "guilty" — a remoção efetiva de roles fica
- * a cargo do staff).
+ * Clears quarantine. If innocent=true, restores previous roles.
+ * Otherwise, keeps the quarantine role until manual decision
+ * (user is just marked as "guilty" — actual role removal is
+ * left to staff).
  */
 async function clearQuarantine(guild, userId, innocent, decidedById = null) {
   const record = await Quarantine.findOne({ guildId: guild.id, userId, status: "active" });
@@ -82,11 +82,11 @@ async function clearQuarantine(guild, userId, innocent, decidedById = null) {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (member) {
       const rolesToRestore = record.previousRoleIds.filter((id) => guild.roles.cache.has(id));
-      await member.roles.set(rolesToRestore).catch((e) => logger.error(`Falha ao restaurar roles: ${e.message}`));
+      await member.roles.set(rolesToRestore).catch((e) => logger.error(`Failed to restore roles: ${e.message}`));
     }
-    logger.info(`Quarentena de ${userId} removida (inocente) em ${guild.id}`);
+    logger.info(`Quarantine cleared for ${userId} (innocent) in ${guild.id}`);
   } else {
-    logger.info(`Utilizador ${userId} marcado como culpado em ${guild.id}, permanece em quarentena`);
+    logger.info(`User ${userId} marked as guilty in ${guild.id}, remains in quarantine`);
   }
 
   return true;

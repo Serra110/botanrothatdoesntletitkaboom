@@ -4,7 +4,7 @@ const QuarantineSchema = new mongoose.Schema(
   {
     guildId: { type: String, required: true, index: true },
     userId: { type: String, required: true, index: true },
-    reason: { type: String, default: "Comportamento suspeito" },
+    reason: { type: String, default: "Suspicious behavior" },
     incidentId: { type: String, default: null },
 
     previousRoleIds: { type: [String], default: [] },

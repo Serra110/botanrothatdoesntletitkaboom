@@ -20,7 +20,7 @@ const client = new Client({
     GatewayIntentBits.GuildWebhooks,
     GatewayIntentBits.GuildInvites,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent // apenas necessário se quiseres inspecionar conteúdo de mensagens
+    GatewayIntentBits.MessageContent // only needed if you want to inspect message content
   ],
   partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
 });
@@ -39,13 +39,13 @@ function loadCommands() {
       client.commands.set(command.data.name, command);
     }
   }
-  logger.info(`${client.commands.size} comandos carregados.`);
+  logger.info(`${client.commands.size} commands loaded.`);
 }
 
 function scheduleJobs() {
-  // Backup automático: corre a cada minuto e decide, por servidor,
-  // se já passou o intervalo configurado (permite intervalos por
-  // servidor mesmo com uma única tarefa cron).
+  // Automatic backup: runs every minute and decides, per server,
+  // if the configured interval has passed (allows per-server
+  // intervals even with a single cron job).
   const lastBackupAt = new Map();
 
   cron.schedule("* * * * *", async () => {
@@ -59,21 +59,21 @@ function scheduleJobs() {
 
       lastBackupAt.set(guild.id, Date.now());
       await backupService.createBackup(guild, { manual: false }).catch((e) =>
-        logger.error(`Erro no backup automático de ${guild.id}: ${e.message}`)
+        logger.error(`Automatic backup error for ${guild.id}: ${e.message}`)
       );
     }
   });
 
-  // Integrity check: corre a cada 15 minutos
+  // Integrity check: runs every 15 minutes
   cron.schedule("*/15 * * * *", async () => {
     for (const guild of client.guilds.cache.values()) {
       await integrityCheckService.runIntegrityCheck(guild).catch((e) =>
-        logger.error(`Erro no integrity check de ${guild.id}: ${e.message}`)
+        logger.error(`Integrity check error for ${guild.id}: ${e.message}`)
       );
     }
   });
 
-  logger.info("Tarefas agendadas (backup automático + integrity check) iniciadas.");
+  logger.info("Scheduled jobs (automatic backup + integrity check) started.");
 }
 
 async function bootstrap() {
@@ -83,13 +83,13 @@ async function bootstrap() {
   scheduleJobs();
 
   client.once("clientReady", () => {
-    logger.info(`Sentinel ligado como ${client.user.tag}`);
+    logger.info(`Sentinel logged in as ${client.user.tag}`);
   });
 
   await client.login(process.env.DISCORD_TOKEN);
 }
 
 bootstrap().catch((err) => {
-  logger.error(`Falha ao iniciar o bot: ${err.message}`);
+  logger.error(`Failed to start bot: ${err.message}`);
   process.exit(1);
 });

@@ -2,8 +2,8 @@ const { PermissionsBitField } = require("discord.js");
 const GuildConfig = require("../models/GuildConfig");
 const logger = require("../utils/logger");
 
-// Permissões bloqueadas durante lockdown (secção 8) — Kick/Ban/Timeout
-// ficam de fora propositadamente, reservados às roles autorizadas.
+// Permissions blocked during lockdown (section 8) — Kick/Ban/Timeout
+// are intentionally excluded, reserved for authorized roles.
 const LOCKDOWN_PERMISSIONS = [
   PermissionsBitField.Flags.ManageChannels,
   PermissionsBitField.Flags.ManageRoles,
@@ -13,8 +13,8 @@ const LOCKDOWN_PERMISSIONS = [
   PermissionsBitField.Flags.CreateInstantInvite
 ];
 
-// Snapshot em memória das permissões removidas, por servidor, para
-// poderem ser restauradas ao desativar o lockdown.
+// In-memory snapshot of removed permissions, per server, so
+// they can be restored when lockdown is disabled.
 const lockdownSnapshots = new Map();
 
 async function enableLockdown(guild) {
@@ -24,8 +24,8 @@ async function enableLockdown(guild) {
   const snapshot = [];
 
   for (const role of guild.roles.cache.values()) {
-    if (role.id === guild.id) continue; // @everyone tratado à parte, mas mantemos regra simples aqui
-    if (config?.authorizedRoleIds?.includes(role.id)) continue; // roles autorizadas ficam intactas
+    if (role.id === guild.id) continue; // @everyone handled separately, but keeping simple rule here
+    if (config?.authorizedRoleIds?.includes(role.id)) continue; // authorized roles stay intact
     if (role.id === config?.quarantineRoleId) continue;
 
     const hasAny = LOCKDOWN_PERMISSIONS.some((p) => role.permissions.has(p));
@@ -34,8 +34,8 @@ async function enableLockdown(guild) {
     snapshot.push({ roleId: role.id, permissions: role.permissions.bitfield.toString() });
 
     const newPermissions = role.permissions.remove(LOCKDOWN_PERMISSIONS);
-    await role.setPermissions(newPermissions, "Sentinel: lockdown ativado").catch((e) =>
-      logger.error(`Falha ao remover permissões de ${role.id} durante lockdown: ${e.message}`)
+    await role.setPermissions(newPermissions, "Sentinel: lockdown enabled").catch((e) =>
+      logger.error(`Failed to remove permissions from ${role.id} during lockdown: ${e.message}`)
     );
   }
 
@@ -46,7 +46,7 @@ async function enableLockdown(guild) {
     await config.save();
   }
 
-  logger.warn(`Lockdown ativado em ${guild.id} (${snapshot.length} roles afetadas)`);
+  logger.warn(`Lockdown enabled in ${guild.id} (${snapshot.length} roles affected)`);
 }
 
 async function disableLockdown(guild) {
@@ -59,8 +59,8 @@ async function disableLockdown(guild) {
     const role = guild.roles.cache.get(roleId);
     if (!role) continue;
     await role
-      .setPermissions(BigInt(permissions), "Sentinel: lockdown desativado")
-      .catch((e) => logger.error(`Falha ao restaurar permissões de ${roleId}: ${e.message}`));
+      .setPermissions(BigInt(permissions), "Sentinel: lockdown disabled")
+      .catch((e) => logger.error(`Failed to restore permissions for ${roleId}: ${e.message}`));
   }
 
   lockdownSnapshots.delete(guild.id);
@@ -70,7 +70,7 @@ async function disableLockdown(guild) {
     await config.save();
   }
 
-  logger.info(`Lockdown desativado em ${guild.id}`);
+  logger.info(`Lockdown disabled in ${guild.id}`);
 }
 
 async function isLockdownActive(guildId) {

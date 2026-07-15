@@ -3,11 +3,11 @@ const GuildConfig = require("../models/GuildConfig");
 const logger = require("../utils/logger");
 
 /**
- * "Modo Honeypot" (funcionalidade extra sugerida): cria uma role e/ou
- * canal administrativo falso, sem uso real, invisível para membros
- * legítimos. Qualquer interação com estes objetos (editar, apagar,
- * conceder a alguém) é um forte indicador de conta comprometida e
- * pode ser usada por eventHandlers para disparar investigação/emergência.
+ * "Honeypot Mode" (extra suggested functionality): creates a role and/or
+ * fake admin channel, unused, invisible to legitimate members.
+ * Any interaction with these objects (edit, delete,
+ * grant to someone) is a strong indicator of a compromised account and
+ * can be used by eventHandlers to trigger investigation/emergency.
  */
 async function setupHoneypot(guild) {
   const config = await GuildConfig.findOne({ guildId: guild.id });
@@ -16,11 +16,11 @@ async function setupHoneypot(guild) {
   let role = config.honeypot?.roleId ? guild.roles.cache.get(config.honeypot.roleId) : null;
   if (!role) {
     role = await guild.roles.create({
-      name: "⚠︎ system-reserved", // nome discreto, parece uma role de sistema
+      name: "⚠︎ system-reserved", // discreet name, looks like a system role
       permissions: [PermissionsBitField.Flags.Administrator],
       hoist: false,
       mentionable: false,
-      reason: "Sentinel: criação da role honeypot"
+      reason: "Sentinel: honeypot role creation"
     });
   }
 
@@ -33,22 +33,22 @@ async function setupHoneypot(guild) {
         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel] }
       ],
-      reason: "Sentinel: criação do canal honeypot"
+      reason: "Sentinel: honeypot channel creation"
     });
   }
 
   config.honeypot = { enabled: true, roleId: role.id, channelId: channel.id };
   await config.save();
 
-  logger.info(`Honeypot configurado em ${guild.id}: role=${role.id} canal=${channel.id}`);
+  logger.info(`Honeypot configured in ${guild.id}: role=${role.id} channel=${channel.id}`);
   return { role, channel };
 }
 
 /**
- * Verifica se um determinado id de role/canal corresponde ao honeypot
- * configurado no servidor. Usar dentro dos event handlers relevantes
+ * Checks if a given role/channel ID matches the honeypot
+ * configured on the server. Use within the relevant event handlers
  * (roleUpdate, roleDelete, channelUpdate, channelDelete, guildMemberUpdate
- * ao conceder a role honeypot a alguém).
+ * when granting the honeypot role to someone).
  */
 async function isHoneypotTriggered(guildId, { roleId = null, channelId = null } = {}) {
   const config = await GuildConfig.findOne({ guildId }).lean();

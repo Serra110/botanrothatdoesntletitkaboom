@@ -12,15 +12,15 @@ const logger = require("../utils/logger");
 
 function register(client) {
   client.on("guildMemberAdd", async (member) => {
-    await logForensic(member.guild, { actorId: member.id, action: "Membro entrou" });
+    await logForensic(member.guild, { actorId: member.id, action: "Member joined" });
 
     if (member.user.bot) {
       const entry = await fetchAuditEntry(member.guild, AuditLogEvent.BotAdd, member.id, 10000);
       const invitedById = entry?.executor?.id;
       await logForensic(member.guild, {
         actorId: invitedById,
-        action: `Bot adicionado: ${member.user.tag}`,
-        detail: { summary: `Convidado por ${invitedById ? `<@${invitedById}>` : "desconhecido"}` }
+        action: `Bot added: ${member.user.tag}`,
+        detail: { summary: `Invited by ${invitedById ? `<@${invitedById}>` : "unknown"}` }
       });
       await antiRaidService.handleBotJoin(member);
     }
@@ -31,10 +31,10 @@ function register(client) {
     if (entry?.executor?.id) {
       await logForensic(member.guild, {
         actorId: entry.executor.id,
-        action: `Membro expulso (kick): ${member.user.tag}`
+        action: `Member kicked: ${member.user.tag}`
       });
     } else {
-      await logForensic(member.guild, { actorId: member.id, action: `Membro saiu: ${member.user.tag}` });
+      await logForensic(member.guild, { actorId: member.id, action: `Member left: ${member.user.tag}` });
     }
   });
 
@@ -43,7 +43,7 @@ function register(client) {
     const entry = await fetchAuditEntry(ban.guild, AuditLogEvent.MemberBanAdd, ban.user.id, 5000);
     const actorId = entry?.executor?.id;
 
-    await logForensic(ban.guild, { actorId, action: `Membro banido: ${ban.user.tag}` });
+    await logForensic(ban.guild, { actorId, action: `Member banned: ${ban.user.tag}` });
 
     if (!actorId) return;
 
@@ -57,7 +57,7 @@ function register(client) {
         "MASS_BAN",
         config?.threatPoints?.massBan ?? 150
       );
-      await maybeEscalate(ban.guild, actorId, result.triggered, "Banimento em massa de membros");
+      await maybeEscalate(ban.guild, actorId, result.triggered, "Mass member ban");
     }
   });
 
@@ -65,14 +65,14 @@ function register(client) {
     const config = await GuildConfig.findOne({ guildId: newMember.guild.id }).lean();
     if (config?.maintenanceMode) return;
 
-    // Timeout aplicado/removido
+    // Timeout applied/removed
     const wasTimedOut = !!oldMember.communicationDisabledUntilTimestamp;
     const isTimedOut = !!newMember.communicationDisabledUntilTimestamp;
     if (wasTimedOut !== isTimedOut) {
       const entry = await fetchAuditEntry(newMember.guild, AuditLogEvent.MemberUpdate, newMember.id, 5000);
       await logForensic(newMember.guild, {
         actorId: entry?.executor?.id,
-        action: `Timeout ${isTimedOut ? "aplicado a" : "removido de"} ${newMember.user.tag}`
+        action: `Timeout ${isTimedOut ? "applied to" : "removed from"} ${newMember.user.tag}`
       });
     }
 
@@ -80,12 +80,12 @@ function register(client) {
     if (oldMember.nickname !== newMember.nickname) {
       await logForensic(newMember.guild, {
         actorId: newMember.id,
-        action: `Nickname alterado: ${newMember.user.tag}`,
-        detail: { summary: `${oldMember.nickname || "(nenhum)"} → ${newMember.nickname || "(nenhum)"}` }
+        action: `Nickname changed: ${newMember.user.tag}`,
+        detail: { summary: `${oldMember.nickname || "(none)"} → ${newMember.nickname || "(none)"}` }
       });
     }
 
-    // Roles atribuídas/removidas
+    // Roles assigned/removed
     const oldRoles = oldMember.roles.cache;
     const newRoles = newMember.roles.cache;
     const added = newRoles.filter((r) => !oldRoles.has(r.id));
@@ -98,19 +98,19 @@ function register(client) {
       if (added.size) {
         await logForensic(newMember.guild, {
           actorId,
-          action: `Roles atribuídas a ${newMember.user.tag}`,
+          action: `Roles assigned to ${newMember.user.tag}`,
           detail: { summary: added.map((r) => r.name).join(", ") }
         });
       }
       if (removed.size) {
         await logForensic(newMember.guild, {
           actorId,
-          action: `Roles removidas de ${newMember.user.tag}`,
+          action: `Roles removed from ${newMember.user.tag}`,
           detail: { summary: removed.map((r) => r.name).join(", ") }
         });
       }
 
-      // Deteção de escalada de privilégio: alguém deu Admin diretamente ao membro
+      // Privilege escalation detection: someone gave Admin directly to the member
       const gainedAdmin = !hasAdministrator(oldMember.permissions) && hasAdministrator(newMember.permissions);
       if (gainedAdmin && actorId) {
         responsibilityChain.recordGrant(newMember.guild.id, {
@@ -125,7 +125,7 @@ function register(client) {
           "GRANT_ADMINISTRATOR",
           config?.threatPoints?.grantAdministrator ?? 120
         );
-        await maybeEscalate(newMember.guild, actorId, result.triggered, `Administrator concedido a ${newMember.user.tag}`);
+        await maybeEscalate(newMember.guild, actorId, result.triggered, `Administrator granted to ${newMember.user.tag}`);
       }
     }
   });

@@ -1,12 +1,12 @@
 const logger = require("../utils/logger");
 
 /**
- * Mapa em memória por servidor: userId -> { grantedBy, grantedAt, grantType }
- * Regista quem concedeu permissões perigosas a quem, para reconstruir
- * a cadeia de responsabilidade num incidente (secção 3 e 10 do spec).
+ * In-memory map per server: userId -> { grantedBy, grantedAt, grantType }
+ * Records who granted dangerous permissions to whom, to reconstruct
+ * the responsibility chain in an incident (sections 3 and 10 of spec).
  *
- * Nota: em produção isto pode ser persistido em MongoDB; mantém-se em
- * memória aqui por simplicidade, com TTL para não crescer indefinidamente.
+ * Note: in production this could be persisted to MongoDB; kept in
+ * memory here for simplicity, with TTL to prevent unbounded growth.
  */
 const grantRegistry = new Map(); // guildId -> Map(userId -> grantInfo)
 const GRANT_TTL_MS = 1000 * 60 * 60 * 6; // 6 horas
@@ -19,7 +19,7 @@ function _guildMap(guildId) {
 function recordGrant(guildId, { granteeId, grantedById, grantType }) {
   const map = _guildMap(guildId);
   map.set(granteeId, { grantedById, grantType, grantedAt: Date.now() });
-  logger.debug(`[Chain][${guildId}] ${grantedById} concedeu ${grantType} a ${granteeId}`);
+  logger.debug(`[Chain][${guildId}] ${grantedById} granted ${grantType} to ${granteeId}`);
 }
 
 function getGrantInfo(guildId, userId) {
@@ -34,9 +34,10 @@ function getGrantInfo(guildId, userId) {
 }
 
 /**
- * Dado o utilizador que executou a ação maliciosa, reconstrói a cadeia
- * ascendente (quem lhe deu a permissão, e quem deu a essa pessoa, etc.)
- * Devolve { primaryResponsible, secondaryResponsible: [] }
+ * Given the user who executed the malicious action, reconstructs the
+ * ascending chain (who gave them the permission, and who gave it to
+ * that person, etc.)
+ * Returns { primaryResponsible, secondaryResponsible: [] }
  */
 function buildResponsibilityChain(guildId, executorId) {
   const chain = [executorId];
@@ -51,9 +52,9 @@ function buildResponsibilityChain(guildId, executorId) {
     current = info.grantedById;
   }
 
-  // O responsável principal é normalmente quem iniciou a cadeia
-  // (concedeu a permissão), o executor é secundário — mas se não há
-  // registo de concessão, o próprio executor é o principal.
+  // The primary responsible is usually who initiated the chain
+  // (granted the permission), the executor is secondary — but if there's
+  // no grant record, the executor themselves is primary.
   if (chain.length === 1) {
     return { primaryResponsible: executorId, secondaryResponsible: [] };
   }
